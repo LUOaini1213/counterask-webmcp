@@ -14,10 +14,10 @@ refusals and all.
 
 **Built with (tags):** webmcp, javascript, html, css, bm25, python, amazon-reviews-2023, no-backend
 
-**Live URL:** https://luoaini1213.github.io/counterask/ (GitHub Pages; no login needed;
+**Live URL:** https://luoaini1213.github.io/counterask-webmcp/ (GitHub Pages; no login needed;
 `?agent=demo` runs the scripted agent in any browser)
 
-**Repository:** https://github.com/LUOaini1213/counterask (MIT, public)
+**Repository:** https://github.com/LUOaini1213/counterask-webmcp (MIT, public)
 
 **Testing instructions for judges:** open the live URL in the ChatGPT desktop
 app's in-app browser, or in Chrome 149+ with `chrome://flags/#enable-webmcp-testing`

@@ -43,13 +43,13 @@ below, trim in ffmpeg. Quality is lower; it is still a valid submission.
 | ffmpeg 9.0.1 | on PATH |
 | Python 3 with Pillow 12 and `edge_tts` | `python` |
 | narration, word for word | below, and `submission/devpost.md` |
-| the live site | https://luoaini1213.github.io/counterask/ (append `?v=<timestamp>` to defeat the 10-minute CDN cache after any push) |
+| the live site | https://luoaini1213.github.io/counterask-webmcp/ (append `?v=<timestamp>` to defeat the 10-minute CDN cache after any push) |
 
 Launch the browser (PowerShell):
 
 ```powershell
 $sp  = "$env:LOCALAPPDATA\Temp\claude\C--Users-LW-Desktop----nus----\68b4661d-d52a-4f21-8561-5adacca24b91\scratchpad"
-Start-Process "$sp\chrome-win64\chrome.exe" -ArgumentList @('--remote-debugging-port=9222', "--user-data-dir=$sp\chrome-profile", '--no-first-run', '--no-default-browser-check', '--window-size=1600,900', '--hide-scrollbars', 'https://luoaini1213.github.io/counterask/?v=1')
+Start-Process "$sp\chrome-win64\chrome.exe" -ArgumentList @('--remote-debugging-port=9222', "--user-data-dir=$sp\chrome-profile", '--no-first-run', '--no-default-browser-check', '--window-size=1600,900', '--hide-scrollbars', 'https://luoaini1213.github.io/counterask-webmcp/?v=1')
 ```
 
 Then `node scripts/video/cdp.mjs "typeof document.modelContext"` must print

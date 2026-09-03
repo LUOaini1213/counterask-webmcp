@@ -7,7 +7,7 @@ budget, refusals, stated attributes and all.
 Built for [The WebMCP Challenge](https://webmcp.devpost.com/).
 9,901 real products. No server, no model call, no tokens.
 
-**Live:** <https://luoaini1213.github.io/counterask/> — open it in the ChatGPT
+**Live:** <https://luoaini1213.github.io/counterask-webmcp/> — open it in the ChatGPT
 desktop app's browser or Chrome with WebMCP enabled; add `?agent=demo` in any
 browser to watch the scripted agent.
 
