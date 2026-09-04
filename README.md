@@ -441,7 +441,8 @@ frozen catalog has no click log.
 ## A parallel implementation
 
 Teammate Cui Zixuan (`cuizhi-chat`) built an independent implementation of
-the same design on the [`cuizi-rewrite`](../../tree/cuizi-rewrite) branch —
+the same design on the [`cuizi-rewrite`](https://github.com/LUOaini1213/counterask/tree/cuizi-rewrite) branch
+of the sibling repository —
 its own parser, policy, tests and a self-contained single-file build. Five of
 its ideas were folded back into this tree: the category tree asked one level
 at a time, the `parse_only` dry run with a
