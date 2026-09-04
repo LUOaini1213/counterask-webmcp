@@ -1,32 +1,89 @@
-# Devpost submission text — Counterask
+# 提交单 — 照抄即可（Devpost 表单逐格对应）
 
-Paste-ready. The four headed sections are the four things the challenge asks
-the description to explain, in the order it asks for them.
+截止：**2026-09-04 16:00 GMT+8**（Devpost 页面倒计时为准）
+
+顺序：先传 YouTube（最慢），拿到链接后再填表。
+
+---
+
+## 0. 先做：上传 YouTube
+
+文件：`counterask-demo.mp4`（1:56.99，7.3 MB，已发到对话里）
+
+- 可见性 **Public**（不是 Unlisted，规则要求 publicly visible）
+- 标题：`Counterask — a WebMCP store that asks back`
+- 说明栏贴：
+  ```
+  Counterask is a menswear storefront whose WebMCP tools return a question
+  when answering would be a guess. 9,901 real products, no server, no model
+  call, no tokens. Recorded in Chrome 152 with WebMCP enabled.
+
+  Live: https://luoaini1213.github.io/counterask-webmcp/
+  Code: https://github.com/LUOaini1213/counterask-webmcp (MIT)
+
+  No music. Built for The WebMCP Challenge.
+  ```
+- 类别：Science & Technology
+- 传完用无痕窗口打开链接确认能播
 
 ---
 
-**Project name:** Counterask
+## 1. Project name
+```
+Counterask
+```
 
-**Elevator pitch (≤ 200 chars):**
-A storefront whose WebMCP tools return a *question* when answering would be a
-guess — and that reads a whole sentence the way an agent relays it: budget,
-refusals and all.
+## 2. Elevator pitch
+```
+A storefront whose WebMCP tools hand the agent a question instead of a guess — and that reads a whole sentence: budget, refusals and all.
+```
 
-**Built with (tags):** webmcp, javascript, html, css, bm25, python, amazon-reviews-2023, no-backend
+## 3. Built with（标签，逐个加）
+```
+webmcp
+javascript
+html
+css
+bm25
+python
+amazon-reviews-2023
+no-backend
+```
 
-**Live URL:** https://luoaini1213.github.io/counterask-webmcp/ (GitHub Pages; no login needed;
-`?agent=demo` runs the scripted agent in any browser)
+## 4. Try it out（链接栏）
+```
+https://luoaini1213.github.io/counterask-webmcp/
+https://github.com/LUOaini1213/counterask-webmcp
+```
 
-**Repository:** https://github.com/LUOaini1213/counterask-webmcp (MIT, public)
+## 5. Video demo link
+```
+（粘贴刚才的 YouTube 链接）
+```
 
-**Testing instructions for judges:** open the live URL in the ChatGPT desktop
-app's in-app browser, or in Chrome 149+ with `chrome://flags/#enable-webmcp-testing`
-enabled. Ask for "a leather belt under $40" and watch `answer_question` appear in
-the tool list; answer it; ask why the first result is first; add one to the cart
-and ask the agent to order it — the checkout is a declarative form only you can
-submit. Without WebMCP, the header button runs the same flow as a scripted agent.
+## 6. 公开代码仓
+```
+https://github.com/LUOaini1213/counterask-webmcp
+```
+
+## 7. 给评委的测试说明（如果表单有这一栏）
+```
+Open the live URL in the ChatGPT desktop app's in-app browser, or in Chrome
+149+ with chrome://flags/#enable-webmcp-testing enabled. No login needed.
+
+Try: "a wallet that is not leather, under $30". The store returns a question
+instead of a list, and answer_question appears in the tool list while it is
+open. Answer it, then ask the agent to add one to the cart and order it — the
+checkout is a declarative WebMCP form without auto-submit, so the agent can
+fill it but only you can press Place order.
+
+Without a WebMCP browser, add ?agent=demo to the URL to watch the same flow
+run as a scripted agent.
+```
 
 ---
+
+## 8. About the project（正文，四段，全部照抄）
 
 ## Why this use case is a strong fit for WebMCP
 
@@ -178,68 +235,13 @@ test of the tool surface run with `npm test`.
 
 ---
 
-## Demo video outline (< 3 minutes, with narration)
+## 检查清单（提交前扫一眼）
 
-1. **0:00–0:20** The problem in one search: type `belt` → 97 belts, leader 5%
-   ahead. "Any store would show you these. This one asks."
-2. **0:20–0:50** The question panel: *What material — leather, nylon,
-   polyester, cotton?* with counts. Click leather → the answer, and the trace
-   explaining why it stopped asking.
-3. **0:50–1:30** The sentence: type `I'm looking for a leather belt, nothing
-   with a snap, not over $50`. Show the chips (you said · not · price), the
-   `understood` echo in the trace, priced items first.
-4. **1:30–2:15** Agent-driven (ChatGPT's browser or Chrome with WebMCP): ask
-   the agent for "a wallet that's not leather, under $30". Show the tool-call
-   log: `search_products` → question → `answer_question` appears in the tool
-   list → the agent relays the question → answer → `show_products`. Point at
-   `answer_question` vanishing afterwards.
-5. **2:15–2:40** The agent adds the cheapest to the cart and fills in the
-   checkout — and stops. Point at the focused *Place order* button: the form is
-   a declarative tool without auto-submit, so the last press is the person's.
-   Press it yourself; the order confirmation appears.
-6. **2:40–3:00** "No results" recovery: `linen suede belt under $12` → the
-   relax buttons → 71 belts. Close on the README benchmark table. "Zero
-   servers, zero tokens, one question at the right moment — and one button
-   only you can press."
+- [ ] YouTube 是 **Public**，能在无痕窗口播放
+- [ ] 视频链接填进表单
+- [ ] 仓库地址填的是 `counterask-webmcp`（About 栏已显示 MIT）
+- [ ] 线上地址能打开
+- [ ] 四段说明都贴了
+- [ ] 点了 **Submit**，页面显示已提交（不是草稿）
 
-## Narration (word for word, ≈ 2 min 40 s at a calm pace)
-
-> This is Counterask, a menswear store built for the WebMCP Challenge.
-> Nine thousand nine hundred and one real products, and nothing runs on a
-> server: retrieval, parsing and the decision to ask all happen in the tab.
->
-> Type "belt". Ninety-seven belts. The first one beats the tenth by five
-> percent. Any store would show you these. This one asks — what material —
-> because it can see that one answer clears forty of them. Click leather, and
-> it answers, and the panel on the right says why it stopped asking.
->
-> Now say it the way a person would: "I'm looking for a leather belt, nothing
-> with a snap, not over fifty dollars." The store reads the budget, the
-> refusal, and the attribute out of the sentence. The chips show what it heard.
-> Priced items come first, and it tells the agent what still separates the
-> results — eleven buckle, one pull-on.
->
-> Here is the same store driven by an agent through WebMCP. The person asks
-> for a wallet that isn't leather, under thirty dollars. The agent calls
-> search_products. The store returns a question instead of a list, and look at
-> the tool list: answer_question appeared, because the page is waiting. The
-> agent relays the question, the person answers, the agent calls
-> answer_question, and the tool is gone again. Then show_products puts the
-> pick on the grid — the person sees products, not a transcript.
->
-> The agent adds the cheapest one to the cart and fills in the checkout — and
-> stops. The checkout is a declarative WebMCP form without auto-submit. The
-> agent can fill it; only I can press Place order. That is the spec's own
-> principle, built into the store: the human interface stays primary.
->
-> When nothing matches — linen suede belt under twelve dollars — the store
-> doesn't say "no results". It says what to give up: drop the material, and
-> seventy-one belts come back.
->
-> Everything is measured. On eight hundred sentences written from real
-> product records, refusals inverted into requirements went from one hundred
-> percent to zero, broken budgets from thirty-one percent to zero, and Hit at
-> ten from point seven nine to point nine nine nine.
->
-> Seven tools, one state machine, zero tokens. A store that asks back when
-> answering would be a guess.
+提交后：仓库、线上站、Devpost 条目都不要再动，直到 9 月 23 日左右公布结果。想继续开发就 fork。
