@@ -168,6 +168,12 @@ tools registered against a stand-in `modelContext`, called in the order a real
 agent would call them, with the conversation shown beside the grid and
 labelled as a simulation. Open the live URL with `?agent=demo` to watch it.
 
+Counterask is new, not an extension of anything: the repository's 48 commits
+run from 2026-09-02 01:48 PT to 2026-09-04, entirely inside the submission
+period, and the only external input is the public Amazon Reviews 2023 dataset
+(McAuley Lab, UCSD), which `scripts/build_catalog.py` turns into the shipped
+product index.
+
 Everything is measured, and the rejected ideas are kept in the code with their
 numbers: a "clear leader, stop asking" rule was built twice and removed twice;
 graded credit for unrecorded attributes was byte-identical at four settings
