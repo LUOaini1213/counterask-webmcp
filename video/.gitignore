@@ -1,0 +1,6 @@
+# Working files: regenerate with make_narration.py, capture.mjs, assemble.py.
+frames/
+narr/
+out/
+cards/
+capture_report.json

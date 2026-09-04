@@ -1,0 +1,38 @@
+[
+  {
+    "id": "s0",
+    "text": "This is Counterask, a menswear store built for the WebMCP Challenge. Nine thousand nine hundred and one real products, and nothing runs on a server. Retrieval, the sentence parser, and the decision to ask, all happen in the tab."
+  },
+  {
+    "id": "s1",
+    "text": "Type belt. Ninety-seven belts, and the first one beats the tenth by five percent. Any store would just show you these. This one asks what material, because it can see that one answer clears forty of them."
+  },
+  {
+    "id": "s1b",
+    "text": "Pick leather, and it answers. The panel on the right says why it stopped asking, and what still separates what you are looking at."
+  },
+  {
+    "id": "s2",
+    "text": "Now say it the way a person would. I'm looking for a leather belt, nothing with a snap, not over fifty dollars. The store reads the budget, the refusal, and the attribute out of the sentence itself, and shows you exactly what it heard."
+  },
+  {
+    "id": "s3",
+    "text": "Here is the same store driven through WebMCP itself, in Chrome with the flag on. The agent calls search products. The store returns a question instead of a list. And look at the tool list: answer question just appeared, because the page is waiting for a person."
+  },
+  {
+    "id": "s3b",
+    "text": "The person answers, the agent passes it on, and the tool is gone again. Eighteen wallets, and the store says they differ mainly by colour."
+  },
+  {
+    "id": "s4",
+    "text": "The agent adds one to the cart and asks to order it. The checkout is a declarative WebMCP form with no auto submit. Chrome fills it in, focuses the button, and stops. The last press is mine. That is the spec's own principle, built into the store."
+  },
+  {
+    "id": "s5",
+    "text": "And when nothing matches, the store doesn't say no results. It says what to give up. Drop the material, and seventy-one belts come back."
+  },
+  {
+    "id": "s6",
+    "text": "Everything here is measured, and every claim was verified on a real WebMCP browser. Twelve tools, one state machine, zero tokens, and one button only you can press."
+  }
+]
