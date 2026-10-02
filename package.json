@@ -7,7 +7,7 @@
   "license": "MIT",
   "scripts": {
     "start": "python -m http.server 5173 --directory public",
-    "test": "node scripts/parse_test.mjs && node scripts/fuzz.mjs && node scripts/tools_test.mjs && node scripts/bench.mjs 400 && node scripts/agentbench.mjs 400 --holdout",
+    "test": "node scripts/cart_test.mjs && node scripts/parse_test.mjs && node scripts/fuzz.mjs && node scripts/tools_test.mjs && node scripts/bench.mjs 400 && node scripts/agentbench.mjs 400 --holdout",
     "fuzz": "node scripts/fuzz.mjs",
     "ab:lookahead": "node scripts/ab_lookahead.mjs",
     "bench": "node scripts/bench.mjs 800 && node scripts/agentbench.mjs 800 && node scripts/agentbench.mjs 800 --holdout",

@@ -13,6 +13,21 @@ browser to watch the scripted agent.
 
 ---
 
+## Demo cart behavior
+
+The cart is a local demonstration, not a live checkout: it does not charge or
+ship anything. Use made-up checkout details; the last demo order is remembered
+in this browser. Quantities must be whole numbers from 1 to 99 per product,
+including previous additions. Invalid additions return an error without changing
+the cart. Products with missing prices can be saved in the cart, but checkout
+stays disabled until they are removed. Tool results report `total: null` when
+any price is missing and `subtotal` for the priced items only. A visible cart
+link and live addition feedback keep the cart reachable on small screens.
+
+These cases, including corrupted saved cart entries, are covered by
+`scripts/cart_test.mjs`, which exercises the production cart handlers with a
+minimal DOM. `npm test` also runs on pull requests before any Pages deployment.
+
 ## The idea
 
 Every WebMCP storefront in this challenge will expose the same shape of tool:

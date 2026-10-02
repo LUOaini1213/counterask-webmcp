@@ -297,11 +297,11 @@ export function registerTools(api, onCall, ctx = context(), onTools = null) {
         type: 'object',
         properties: {
           id: { type: 'string', description: 'A product id from the current results.' },
-          quantity: { type: 'integer', minimum: 1, description: 'Default 1.' },
+          quantity: { type: 'integer', minimum: 1, maximum: 99, description: 'Default 1. At most 99 of a product in the cart, including previous additions.' },
         },
         required: ['id'],
       },
-      execute: traced('add_to_cart', ({ id, quantity }) => api.addToCart(id, quantity ?? 1)),
+      execute: traced('add_to_cart', ({ id, quantity }) => api.addToCart(id, quantity === undefined ? 1 : quantity)),
     },
     {
       name: 'remove_from_cart',

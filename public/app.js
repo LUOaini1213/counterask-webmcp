@@ -88,6 +88,10 @@ async function boot() {
     e.preventDefault();
     const data = new FormData(e.target);
     const result = placeOrder({ name: data.get('name'), address: data.get('address') });
+    if (result.error) {
+      el('cartHint').textContent = result.error;
+      el('cartHint').hidden = false;
+    }
     if (e.agentInvoked && typeof e.respondWith === 'function') e.respondWith(Promise.resolve(result));
   });
   // Restore before the first render of anything that persists, or the empty
@@ -141,12 +145,15 @@ function renderTools(names) {
 
 // --- the cart, and the one move an agent cannot make ---------------------
 
+const MAX_CART_QUANTITY = 99;
+const validQuantity = (qty) => Number.isInteger(qty) && qty >= 1 && qty <= MAX_CART_QUANTITY;
+
 function cartLines() {
   const lines = [];
   for (const [id, quantity] of state.cart) {
     const it = state.catalog.byId.get(id);
     if (!it) continue;
-    const price = typeof it.p === 'number' ? it.p : null;
+    const price = Number.isFinite(it.p) && it.p >= 0 ? it.p : null;
     lines.push({ id, title: it.t, quantity, price, lineTotal: price != null ? +(price * quantity).toFixed(2) : null });
   }
   return lines;
@@ -159,10 +166,11 @@ function cartSnapshot(extra = {}) {
   return {
     status: 'cart',
     items,
-    total,
+    total: unpriced ? null : total,
+    subtotal: total,
     ...(unpriced ? { unpricedItems: unpriced } : {}),
     ...(state.order ? { lastOrder: state.order } : {}),
-    note: items.length
+    note: unpriced ? 'Some prices are unavailable. Remove those items before checkout; the subtotal covers priced items only.' : items.length
       ? 'To order, fill in the checkout form (a declarative tool: name and address) — the shopper presses Place order.'
       : 'The cart is empty.',
     ...extra,
@@ -172,26 +180,40 @@ function cartSnapshot(extra = {}) {
 function addToCart(id, quantity = 1, actor = 'agent') {
   const it = state.catalog.byId.get(id);
   if (!it) return { ...cartSnapshot(), error: `"${id}" is not a product id in this catalogue.` };
-  const qty = Math.max(1, Math.floor(Number(quantity) || 1));
-  state.cart.set(id, (state.cart.get(id) || 0) + qty);
+  const qty = quantity;
+  const next = (state.cart.get(id) || 0) + qty;
+  if (!validQuantity(qty) || !validQuantity(next)) {
+    const error = `Quantity must be a whole number from 1 to ${MAX_CART_QUANTITY}, including items already in the cart.`;
+    el('cartFeedback').textContent = error;
+    return cartSnapshot({ error });
+  }
+  state.cart.set(id, next);
   renderCart();
+  el('cartFeedback').textContent = `Added ${qty} to your cart: ${it.t}.`;
   return cartSnapshot({ added: { id, title: it.t, quantity: qty } });
 }
 
 function removeFromCart(id, actor = 'agent') {
   const had = state.cart.delete(id);
   renderCart();
+  if (had) el('cartFeedback').textContent = 'Item removed from your cart.';
   return cartSnapshot(had ? { removed: id } : { error: `"${id}" was not in the cart.` });
 }
 
 function placeOrder({ name, address }) {
   const items = cartLines();
   if (!items.length) return { status: 'no_order', error: 'The cart is empty.' };
+  if (items.some((item) => item.price == null)) {
+    return { status: 'no_order', error: 'Remove items with unavailable prices before checkout.' };
+  }
+  name = typeof name === 'string' ? name.trim() : '';
+  address = typeof address === 'string' ? address.trim() : '';
   if (!name || !address) return { status: 'no_order', error: 'Name and address are required.' };
   const total = +items.reduce((a, l) => a + (l.lineTotal ?? 0), 0).toFixed(2);
   state.order = { id: `CA-${Date.now().toString(36).toUpperCase()}`, name, address, items, total, placedBy: 'the shopper' };
   state.cart = new Map();
   renderCart();
+  el('cartFeedback').textContent = 'Demo order placed. No payment was taken.';
   return { status: 'placed', order: state.order };
 }
 
@@ -220,15 +242,23 @@ function renderCart() {
     list.append(li);
   }
   const total = items.reduce((a, l) => a + (l.lineTotal ?? 0), 0);
-  el('cartCount').textContent = items.length ? `${items.reduce((a, l) => a + l.quantity, 0)} item${items.length > 1 ? 's' : ''}` : '';
-  el('cartTotal').textContent = items.length ? `Total $${total.toFixed(2)}` : '';
+  const count = items.reduce((a, l) => a + l.quantity, 0);
+  const unpriced = items.some((item) => item.price == null);
+  el('cartCount').textContent = count ? `${count} item${count === 1 ? '' : 's'}` : '';
+  el('cartJump').hidden = !count;
+  el('cartJump').textContent = `View cart (${count})`;
+  el('cartTotal').textContent = items.length ? `${unpriced ? 'Priced subtotal' : 'Total'} $${total.toFixed(2)}` : '';
   el('checkout').hidden = !items.length;
-  el('cartHint').hidden = items.length > 0;
-  el('cartHint').textContent = 'Nothing yet. Add from a card, or let the agent call add_to_cart.';
+  el('checkout').querySelector('button[type=submit]').disabled = unpriced;
+  el('cartHint').hidden = items.length > 0 && !unpriced;
+  el('cartHint').textContent = unpriced
+    ? 'Some prices are unavailable. Remove those items before checkout; the subtotal covers priced items only.'
+    : 'Nothing yet. Add from a card, or let the agent call add_to_cart.';
   const done = el('orderDone');
   if (state.order && !items.length) {
     done.hidden = false;
-    done.textContent = `Order ${state.order.id} placed by you — ${state.order.items.length} item${state.order.items.length > 1 ? 's' : ''}, $${state.order.total.toFixed(2)}, to ${state.order.address}.`;
+    const orderCount = state.order.items.reduce((sum, item) => sum + item.quantity, 0);
+    done.textContent = `Demo order ${state.order.id} placed by you — ${orderCount} item${orderCount === 1 ? '' : 's'}, $${state.order.total.toFixed(2)}, to ${state.order.address}.`;
   } else {
     done.hidden = true;
   }
@@ -476,7 +506,8 @@ function restore() {
   try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch { return false; }
   if (!saved) return false;
   const cat = state.catalog;
-  if (Array.isArray(saved.cart)) state.cart = new Map(saved.cart.filter(([id]) => cat.byId.has(id)));
+  if (Array.isArray(saved.cart)) state.cart = new Map(saved.cart.filter((entry) =>
+    Array.isArray(entry) && entry.length === 2 && cat.byId.has(entry[0]) && validQuantity(entry[1])));
   if (saved.order) state.order = saved.order;
   if (!saved.said) return false;
   Object.assign(state, {
@@ -791,7 +822,7 @@ function renderGrid(d) {
       .map(([, vals]) => `<span class="tag">${esc(vals[0])}</span>`).join('');
     const price = typeof it.p === 'number'
       ? `$${it.p.toFixed(2)}`
-      : (state.budget ? '<span class="dim">price not listed</span>' : '—');
+      : '<span class="dim">price not listed</span>';
     card.innerHTML = `
       <div class="t">${esc(it.t)}</div>
       ${it.b ? `<div class="brand2">${esc(it.b)}</div>` : ''}
