@@ -18,6 +18,7 @@ const context = () => document.modelContext ?? navigator.modelContext ?? null;
 // How long a closed question keeps its answer_question tool registered, so
 // the browser can finish delivering the call that closed it.
 const POLICY_UNREGISTER_DELAY = 1500;
+const registeredContexts = new WeakSet();
 
 const FACETS = ['material', 'closure', 'sleeve', 'fit', 'care', 'origin', 'sole', 'occasion', 'pocket', 'waterproof', 'color', 'kind'];
 
@@ -44,6 +45,8 @@ export async function listTools(ctx) {
 // told the tool names whenever they change.
 export function registerTools(api, onCall, ctx = context(), onTools = null) {
   if (!ctx?.registerTool) return false;
+  if (registeredContexts.has(ctx)) return true;
+  registeredContexts.add(ctx);
 
   const announce = async () => { if (onTools) onTools(await listTools(ctx)); };
   if (typeof ctx.addEventListener === 'function') ctx.addEventListener('toolchange', announce);
@@ -79,18 +82,31 @@ export function registerTools(api, onCall, ctx = context(), onTools = null) {
   // rejects an executeTool whose tool is aborted while the browser is still
   // finishing that call ("The operation failed for an unknown transient
   // reason"), and a macrotask later was still too soon. So a closed question
-  // takes its tool away a moment later, and at the latest at the start of
-  // the next call. The stand-in never minded either way.
-  let lastResult = null;
+  // takes its tool away a moment later. A new question cancels that close;
+  // read-only/cart calls do not alter the page's question state.
+  let pendingQuestion = false;
   let unregisterTimer = null;
-  const settle = () => syncAnswerTool(lastResult).catch((err) => console.warn('WebMCP tool sync failed', err));
+  let syncing = Promise.resolve();
+  // Serialize register/unregister transitions so concurrent tool calls cannot
+  // both register the same dynamic tool. Always read the latest page state.
+  const settle = () => (syncing = syncing.then(syncAnswerTool)
+    .catch((err) => console.warn('WebMCP tool sync failed', err)));
+  function questionChanged(pending) {
+    pendingQuestion = pending;
+    if (unregisterTimer) { clearTimeout(unregisterTimer); unregisterTimer = null; }
+    if (pending) settle();
+    else unregisterTimer = setTimeout(() => { unregisterTimer = null; settle(); }, POLICY_UNREGISTER_DELAY);
+  }
+  const observesPage = typeof api.subscribeQuestion === 'function';
   const traced = (name, fn) => async (args) => {
-    if (unregisterTimer) { clearTimeout(unregisterTimer); unregisterTimer = null; await settle(); }
     const result = await fn(args ?? {});
     onCall?.(name, result);
-    lastResult = result;
-    if (result?.status === 'need_more_evidence') await settle();
-    else unregisterTimer = setTimeout(() => { unregisterTimer = null; settle(); }, POLICY_UNREGISTER_DELAY);
+    // Older API adapters have no page subscription. Only search-state results
+    // may then change the question; a cart/read-only result says nothing about it.
+    if (!observesPage && ['need_more_evidence', 'answer', 'no_match'].includes(result?.status)) {
+      questionChanged(result.status === 'need_more_evidence');
+    }
+    if (pendingQuestion) await settle();
     return {
       content: [{ type: 'text', text: JSON.stringify(result) }],
       structuredContent: result,
@@ -100,9 +116,8 @@ export function registerTools(api, onCall, ctx = context(), onTools = null) {
   // answer_question only exists while a question is on the table. An agent
   // reading the tool list can see, without being told, that the page is
   // waiting on the shopper.
-  async function syncAnswerTool(result) {
-    const pending = result?.status === 'need_more_evidence';
-    if (pending && !dropAnswerTool) {
+  async function syncAnswerTool() {
+    if (pendingQuestion && !dropAnswerTool) {
       dropAnswerTool = await register({
         name: 'answer_question',
         title: 'Answer the store\'s question',
@@ -127,7 +142,7 @@ export function registerTools(api, onCall, ctx = context(), onTools = null) {
           api.answerQuestion(values ?? (value != null ? [value] : []), 'agent')),
       });
       await announce();
-    } else if (!pending && dropAnswerTool) {
+    } else if (!pendingQuestion && !unregisterTimer && dropAnswerTool) {
       const drop = dropAnswerTool;
       dropAnswerTool = null;
       await drop();
@@ -163,8 +178,8 @@ export function registerTools(api, onCall, ctx = context(), onTools = null) {
           },
           attributes: facetMap('Attributes the shopper requires.'),
           exclude: facetMap('Attributes the shopper refuses.'),
-          budget_max: { type: 'number', description: 'Ceiling in dollars. Products with no listed price are kept, ranked after priced ones.' },
-          budget_min: { type: 'number', description: 'Floor in dollars.' },
+          budget_max: { type: 'number', minimum: 0, description: 'Ceiling in dollars. Products with no listed price are kept, ranked after priced ones.' },
+          budget_min: { type: 'number', minimum: 0, description: 'Floor in dollars.' },
           no_preference: {
             type: 'array',
             items: { type: 'string', enum: FACETS },
@@ -332,5 +347,6 @@ export function registerTools(api, onCall, ctx = context(), onTools = null) {
   ];
 
   Promise.all(tools.map(register)).then(announce).catch((err) => console.warn('WebMCP registration failed', err));
+  if (observesPage) api.subscribeQuestion(questionChanged);
   return true;
 }
