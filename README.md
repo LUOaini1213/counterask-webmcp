@@ -7,11 +7,49 @@ budget, refusals, stated attributes and all.
 Built for [The WebMCP Challenge](https://webmcp.devpost.com/).
 9,901 real products. No server, no model call, no tokens.
 
-**Live:** <https://luoaini1213.github.io/counterask-webmcp/> — open it in the ChatGPT
-desktop app's browser or Chrome with WebMCP enabled; add `?agent=demo` in any
-browser to watch the scripted agent.
+**Try it:** <https://luoaini1213.github.io/counterask-webmcp/> works as a search
+page in any modern browser. Search **belt**, answer the material question, then
+try **a wallet that is not leather, under $30** to see the constraints it heard.
+The ChatGPT desktop browser or Chrome with WebMCP adds agent control; append
+`?agent=demo` to watch a labelled scripted demonstration in other browsers.
 
 ---
+
+## Demo cart behavior
+
+The cart is a local demonstration, not a live checkout: it does not charge or
+ship anything. Use made-up checkout details; the last demo order is remembered
+in this browser. Quantities must be whole numbers from 1 to 99 per product,
+including previous additions. Invalid additions return an error without changing
+the cart. Products with missing prices can be saved in the cart, but checkout
+stays disabled until they are removed. Tool results report `total: null` when
+any price is missing and `subtotal` for the priced items only. A visible cart
+link and live addition feedback keep the cart reachable on small screens.
+
+These cases, including corrupted saved cart entries, are covered by
+`scripts/cart_test.mjs`, which exercises the production cart handlers with a
+minimal DOM. `npm test` also runs on pull requests before any Pages deployment.
+
+### Keeping the conversation consistent
+
+The page owns the current question. Human clicks, restored sessions and agent
+calls all update the same state; viewing the cart or inspecting a parse does
+not close a pending question. Tool registrations are serialized so overlapping
+calls cannot register duplicate answer tools. Agent-curated grids must still
+respect the current search constraints.
+
+Budgets combine both bounds, including separately stated lower and upper
+limits. Contradictory bounds return no matches with a `budgetConflict` reason.
+Invalid answers preserve the pending question instead of spending a clarification
+turn. Saved sessions validate fields individually so one damaged value does not
+discard valid refinements or prevent the page from starting. Catalogue load
+failures show a retry instruction instead of leaving a silently broken page.
+
+Regression tests cover these transitions and malformed storage alongside the
+parser, retrieval benchmarks and scripted demo. The frozen catalogue still has
+many missing prices, and regex-based understanding does not cover arbitrary
+English. Benchmark hit rates are retrieval evidence, not proof that every request
+or human preference is understood.
 
 ## The idea
 
@@ -349,7 +387,7 @@ Two benchmarks, both self-supervised from the product records, both seeded:
   listening check at zero failures. Under held-out phrasings: Hit@10 0.991 ·
   Hit@1 0.900 · MRR 0.935, still zero failures. `SHOPPER=menu` runs either
   benchmark with a shopper who can only pick from the four options shown.
-- [`scripts/parse_test.mjs`](scripts/parse_test.mjs) — 61 hand-written
+- [`scripts/parse_test.mjs`](scripts/parse_test.mjs) — 80 hand-written
   sentences with what the parser must and must not take from each.
 - [`scripts/fuzz.mjs`](scripts/fuzz.mjs) — 4,000 sentences nobody wrote,
   built from fragments of every pass in random order: the parser must never
@@ -366,6 +404,13 @@ person's patience or a missing attribute. That is why the ask threshold is
 set in absolute candidates removed, and why a "clear leader" shortcut is not
 shipped — those were the two places measurement said no.
 
+The 2026-10-03 review ran the smaller `npm test` gate on the current code:
+400 keyword targets gave Hit@10 **1.000** and Hit@1 **0.875**; 400 held-out
+agent phrasings gave Hit@10 **0.985** and Hit@1 **0.890**, with zero measured
+budget/refusal violations. Six held-out targets still missed the top ten.
+The earlier figures above are historical larger benchmark runs, not a
+before/after comparison with this smaller review sample.
+
 Retrieval takes about two milliseconds a query on a laptop; the whole
 storefront is a 0.58 MB download.
 
@@ -374,7 +419,7 @@ storefront is a 0.58 MB download.
 ```bash
 python scripts/build_catalog.py --source /path/to/catalog.jsonl   # optional, output is committed
 python -m http.server 5173 --directory public                     # or: npm start, npx serve public
-npm test                                                          # parser cases, tool surface, both benchmarks
+npm test                                                          # state, cart, parser, tools and both benchmarks
 ```
 
 Then open `http://localhost:5173` in the **ChatGPT desktop app's in-app
@@ -422,7 +467,14 @@ scripts/
   build_catalog.py  50,000-product source catalog -> browser index
   bench.mjs         ground truth, two-word shopper
   agentbench.mjs    ground truth, agent-relayed sentences (--holdout for unseen phrasings)
-  parse_test.mjs    61 hand-written sentences the parser must read, and must not over-read
+  parse_test.mjs    hand-written sentences the parser must read, and must not over-read
+  search_edge_test.mjs price bounds and refusal checks against real catalogue results
+  dialogue_test.mjs structured overrides, refinements, retractions and invalid answers
+  question_lifecycle_test.mjs human/agent question synchronization and races
+  session_test.mjs  saved visits, corrupt fields and catalogue load failures
+  cart_test.mjs     cart quantities, missing prices and checkout validation
+  curation_test.mjs agent-curated grids preserve constraints and pending questions
+  demo_test.mjs     scripted demo with priced, unpriced and rejected cart additions
   tools_test.mjs    the WebMCP surface, with a stand-in modelContext
   smoke.mjs         policy behaviour on the sample queries
   eval.mjs          pool sizes, ask rate, timing across 50 queries

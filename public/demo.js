@@ -112,8 +112,17 @@ export async function runScript(ctx, show, pause = (ms) => new Promise((r) => se
   show('person', 'Put the cheapest one in my cart and order it.');
   await pause(800);
   const cart = await call('add_to_cart', { id: cheapest[0].id, quantity: 1 });
-  if (cart?.items?.length) {
-    show('agent', `In the cart: ${short(cart.items[0].title, 40)}${money(cart.items[0].price)}. Total $${cart.total.toFixed(2)}.`);
+  if (cart?.error) {
+    show('agent', cart.error);
+  } else if (cart?.items?.length) {
+    const added = cart.items.find((item) => item.id === cheapest[0].id) ?? cart.items[0];
+    const total = Number.isFinite(cart.total) ? `Total $${cart.total.toFixed(2)}.`
+      : `Priced subtotal $${(cart.subtotal ?? 0).toFixed(2)}. Some items have no listed price; remove those before checkout.`;
+    show('agent', `In the cart: ${short(added.title, 40)}${money(added.price)}. ${total}`);
+    if (!Number.isFinite(cart.total)) {
+      show('note', 'End of script. Your cart is unchanged except for the item just added.');
+      return;
+    }
     await pause(900);
     show('agent', 'I can fill in the checkout form for you, but I cannot place the order — the store made its checkout a form without auto-submit, so the last press is yours.');
     await pause(700);

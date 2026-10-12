@@ -64,6 +64,11 @@
   .examples{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0 0}
   .examples button{background:var(--line-soft);color:var(--body);border-color:transparent;font-weight:500;font-size:13px;padding:5px 11px;border-radius:999px}
   .examples button:hover{border-color:var(--line)}
+  .cartjump{display:inline-block;margin-top:12px;padding:8px 14px;border-radius:10px;background:var(--ok);color:var(--paper);text-decoration:none;font-size:13px}
+  #cartFeedback{font-size:13px;margin:6px 0;color:var(--body)}
+  #cartPanel{scroll-margin-top:20px}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  @media(max-width:940px){.cartjump{position:fixed;bottom:16px;right:20px;z-index:5;box-shadow:var(--shadow)}}
 
   .chips{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 0;min-height:0}
   .chip{
@@ -111,7 +116,7 @@
   .p{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;display:flex;flex-direction:column;gap:7px}
   .p .t{color:var(--ink);font-weight:600;font-size:14px;line-height:1.4}
   .p .brand2{font-size:12.5px;color:var(--muted)}
-  .p .meta{margin-top:auto;display:flex;align-items:baseline;gap:10px;padding-top:7px;border-top:1px solid var(--line-soft)}
+  .p .meta{margin-top:auto;display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding-top:7px;border-top:1px solid var(--line-soft)}
   .price{font-family:"JetBrains Mono",monospace;font-weight:500;color:var(--ink);font-size:14px}
   .price .dim{font-family:inherit;font-weight:400;font-size:11.5px;color:var(--muted)}
   .rating{font-size:12.5px;color:var(--muted)}
@@ -202,6 +207,8 @@
     <button class="ghost" id="clear">Reset</button>
   </div>
   <div class="examples" id="examples"></div>
+  <a class="cartjump" id="cartJump" href="#cartPanel" hidden>View cart</a>
+  <p id="cartFeedback" role="status" aria-live="polite"></p>
 
   <div class="chips" id="chips"></div>
 
@@ -235,16 +242,17 @@
         <h4>Cart <span class="n" id="cartCount"></span></h4>
         <div class="body">
           <ul id="cartItems" class="cart"></ul>
-          <p class="hint" id="cartHint">Nothing yet. Add from a card, or let the agent call add_to_cart.</p>
+          <p class="hint">Demo checkout only. No payment or delivery. Use made-up details; this browser remembers your demo order.</p>
+          <p class="hint" id="cartHint" role="status" aria-live="polite">Nothing yet. Add from a card, or let the agent call add_to_cart.</p>
           <!-- A declarative WebMCP tool. No toolautosubmit, on purpose: an agent
                may fill it in; the browser then focuses the button, and only
                the person presses it. -->
           <form id="checkout" class="checkout" hidden
                 toolname="checkout"
                 tooldescription="Place the order for everything in the cart. Fill in the shopper's name and delivery address. This form is deliberately not auto-submitted: after it is filled, the shopper reviews it and presses Place order themselves.">
-            <input name="name" type="text" placeholder="Full name" autocomplete="name" required
+            <input name="name" type="text" placeholder="Full name" aria-label="Full name" autocomplete="off" required
                    toolparamdescription="The shopper's full name, as it should appear on the order">
-            <input name="address" type="text" placeholder="Delivery address" autocomplete="street-address" required
+            <input name="address" type="text" placeholder="Delivery address" aria-label="Delivery address" autocomplete="off" required
                    toolparamdescription="Street address, city and postcode for delivery">
             <div class="row"><span class="total" id="cartTotal"></span><button type="submit" class="primary small">Place order</button></div>
           </form>

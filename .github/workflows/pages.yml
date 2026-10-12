@@ -7,6 +7,7 @@
 name: pages
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
@@ -17,7 +18,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,6 +32,7 @@ jobs:
       - run: npm test
 
   deploy:
+    if: github.event_name != 'pull_request'
     needs: test
     runs-on: ubuntu-latest
     environment:

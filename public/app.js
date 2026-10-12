@@ -41,6 +41,11 @@ const state = {
   order: null,          // the last order placed, by the person
 };
 
+const questionListeners = new Set();
+function notifyQuestionChange() {
+  for (const listener of questionListeners) listener(Boolean(state.pending));
+}
+
 // The box parses sentences too, not just the tools. These show it.
 const EXAMPLES = [
   'belt',
@@ -54,10 +59,20 @@ const EXAMPLES = [
 // --- boot ---------------------------------------------------------------
 
 async function boot() {
-  const res = await fetch('./data/catalog.json');
-  const payload = await res.json();
-  state.catalog = new Catalog(payload);
-  state.vocab = countVocab(state.catalog);
+  const controls = ['q', 'go', 'clear'].map(el);
+  controls.forEach((control) => { control.disabled = true; });
+  try {
+    const res = await fetch('./data/catalog.json');
+    if (!res.ok) throw new Error(`Catalogue request failed: ${res.status}`);
+    const payload = await res.json();
+    state.catalog = new Catalog(payload);
+    state.vocab = countVocab(state.catalog);
+  } catch {
+    el('statusTitle').textContent = 'Products could not be loaded';
+    el('statusN').textContent = 'Check your connection, then reload the page to try again.';
+    el('mcpstate').textContent = 'Catalogue unavailable';
+    return false;
+  }
 
   el('examples').innerHTML = '';
   for (const q of EXAMPLES) {
@@ -88,6 +103,10 @@ async function boot() {
     e.preventDefault();
     const data = new FormData(e.target);
     const result = placeOrder({ name: data.get('name'), address: data.get('address') });
+    if (result.error) {
+      el('cartHint').textContent = result.error;
+      el('cartHint').hidden = false;
+    }
     if (e.agentInvoked && typeof e.respondWith === 'function') e.respondWith(Promise.resolve(result));
   });
   // Restore before the first render of anything that persists, or the empty
@@ -106,9 +125,12 @@ async function boot() {
     el('demoBtn').addEventListener('click', startDemo);
     if (new URLSearchParams(location.search).get('agent') === 'demo') startDemo();
   }
+  controls.forEach((control) => { control.disabled = false; });
+  return true;
 }
 
 let demoRunning = false;
+let demoContext = null;
 async function startDemo() {
   if (demoRunning) return;
   demoRunning = true;
@@ -117,7 +139,7 @@ async function startDemo() {
   el('convo').innerHTML = '';
   el('convoPanel').hidden = false;
   el('mcpstate').textContent = 'Scripted agent running — a simulation, WebMCP is not available in this browser';
-  const ctx = standInContext();
+  const ctx = demoContext ??= standInContext();
   registerTools(api, logCall, ctx, renderTools);
   await new Promise((r) => setTimeout(r, 0));
   try {
@@ -141,12 +163,15 @@ function renderTools(names) {
 
 // --- the cart, and the one move an agent cannot make ---------------------
 
+const MAX_CART_QUANTITY = 99;
+const validQuantity = (qty) => Number.isInteger(qty) && qty >= 1 && qty <= MAX_CART_QUANTITY;
+
 function cartLines() {
   const lines = [];
   for (const [id, quantity] of state.cart) {
     const it = state.catalog.byId.get(id);
     if (!it) continue;
-    const price = typeof it.p === 'number' ? it.p : null;
+    const price = Number.isFinite(it.p) && it.p >= 0 ? it.p : null;
     lines.push({ id, title: it.t, quantity, price, lineTotal: price != null ? +(price * quantity).toFixed(2) : null });
   }
   return lines;
@@ -159,10 +184,11 @@ function cartSnapshot(extra = {}) {
   return {
     status: 'cart',
     items,
-    total,
+    total: unpriced ? null : total,
+    subtotal: total,
     ...(unpriced ? { unpricedItems: unpriced } : {}),
     ...(state.order ? { lastOrder: state.order } : {}),
-    note: items.length
+    note: unpriced ? 'Some prices are unavailable. Remove those items before checkout; the subtotal covers priced items only.' : items.length
       ? 'To order, fill in the checkout form (a declarative tool: name and address) — the shopper presses Place order.'
       : 'The cart is empty.',
     ...extra,
@@ -172,26 +198,40 @@ function cartSnapshot(extra = {}) {
 function addToCart(id, quantity = 1, actor = 'agent') {
   const it = state.catalog.byId.get(id);
   if (!it) return { ...cartSnapshot(), error: `"${id}" is not a product id in this catalogue.` };
-  const qty = Math.max(1, Math.floor(Number(quantity) || 1));
-  state.cart.set(id, (state.cart.get(id) || 0) + qty);
+  const qty = quantity;
+  const next = (state.cart.get(id) || 0) + qty;
+  if (!validQuantity(qty) || !validQuantity(next)) {
+    const error = `Quantity must be a whole number from 1 to ${MAX_CART_QUANTITY}, including items already in the cart.`;
+    el('cartFeedback').textContent = error;
+    return cartSnapshot({ error });
+  }
+  state.cart.set(id, next);
   renderCart();
+  el('cartFeedback').textContent = `Added ${qty} to your cart: ${it.t}.`;
   return cartSnapshot({ added: { id, title: it.t, quantity: qty } });
 }
 
 function removeFromCart(id, actor = 'agent') {
   const had = state.cart.delete(id);
   renderCart();
+  if (had) el('cartFeedback').textContent = 'Item removed from your cart.';
   return cartSnapshot(had ? { removed: id } : { error: `"${id}" was not in the cart.` });
 }
 
 function placeOrder({ name, address }) {
   const items = cartLines();
   if (!items.length) return { status: 'no_order', error: 'The cart is empty.' };
+  if (items.some((item) => item.price == null)) {
+    return { status: 'no_order', error: 'Remove items with unavailable prices before checkout.' };
+  }
+  name = typeof name === 'string' ? name.trim() : '';
+  address = typeof address === 'string' ? address.trim() : '';
   if (!name || !address) return { status: 'no_order', error: 'Name and address are required.' };
   const total = +items.reduce((a, l) => a + (l.lineTotal ?? 0), 0).toFixed(2);
   state.order = { id: `CA-${Date.now().toString(36).toUpperCase()}`, name, address, items, total, placedBy: 'the shopper' };
   state.cart = new Map();
   renderCart();
+  el('cartFeedback').textContent = 'Demo order placed. No payment was taken.';
   return { status: 'placed', order: state.order };
 }
 
@@ -220,15 +260,23 @@ function renderCart() {
     list.append(li);
   }
   const total = items.reduce((a, l) => a + (l.lineTotal ?? 0), 0);
-  el('cartCount').textContent = items.length ? `${items.reduce((a, l) => a + l.quantity, 0)} item${items.length > 1 ? 's' : ''}` : '';
-  el('cartTotal').textContent = items.length ? `Total $${total.toFixed(2)}` : '';
+  const count = items.reduce((a, l) => a + l.quantity, 0);
+  const unpriced = items.some((item) => item.price == null);
+  el('cartCount').textContent = count ? `${count} item${count === 1 ? '' : 's'}` : '';
+  el('cartJump').hidden = !count;
+  el('cartJump').textContent = `View cart (${count})`;
+  el('cartTotal').textContent = items.length ? `${unpriced ? 'Priced subtotal' : 'Total'} $${total.toFixed(2)}` : '';
   el('checkout').hidden = !items.length;
-  el('cartHint').hidden = items.length > 0;
-  el('cartHint').textContent = 'Nothing yet. Add from a card, or let the agent call add_to_cart.';
+  el('checkout').querySelector('button[type=submit]').disabled = unpriced;
+  el('cartHint').hidden = items.length > 0 && !unpriced;
+  el('cartHint').textContent = unpriced
+    ? 'Some prices are unavailable. Remove those items before checkout; the subtotal covers priced items only.'
+    : 'Nothing yet. Add from a card, or let the agent call add_to_cart.';
   const done = el('orderDone');
   if (state.order && !items.length) {
     done.hidden = false;
-    done.textContent = `Order ${state.order.id} placed by you — ${state.order.items.length} item${state.order.items.length > 1 ? 's' : ''}, $${state.order.total.toFixed(2)}, to ${state.order.address}.`;
+    const orderCount = state.order.items.reduce((sum, item) => sum + item.quantity, 0);
+    done.textContent = `Demo order ${state.order.id} placed by you — ${orderCount} item${orderCount === 1 ? '' : 's'}, $${state.order.total.toFixed(2)}, to ${state.order.address}.`;
   } else {
     done.hidden = true;
   }
@@ -300,17 +348,44 @@ function applyGiven(given) {
     }
     return ok.length ? ok : null;
   };
+  const attributes = {};
+  const exclude = {};
   for (const [facet, values] of Object.entries(given.attributes ?? {})) {
     const ok = accept(facet, values);
-    if (ok) state.constraints[facet] = ok;
+    if (ok) attributes[facet] = ok;
   }
   for (const [facet, values] of Object.entries(given.exclude ?? {})) {
     const ok = accept(facet, values);
-    if (ok) state.exclude[facet] = ok;
+    if (ok) exclude[facet] = ok;
   }
-  const money = (v) => (v == null || v === '' || Number.isNaN(Number(v)) ? null : Number(v));
-  if (money(given.budget_max) != null || money(given.budget_min) != null) {
-    state.budget = { min: money(given.budget_min), max: money(given.budget_max) };
+  for (const [facet, values] of Object.entries(attributes)) {
+    state.constraints[facet] = values;
+    removeExclusion(facet, values);
+    state.declined.delete(facet);
+    state.conflicts = state.conflicts.filter((conflict) => conflict.facet !== facet);
+  }
+  for (const [facet, values] of Object.entries(exclude)) {
+    // A structured field replaces that parsed field. Only parsed opposing
+    // requirements are removed: two explicit structured sides remain hard
+    // constraints, even when the shopper supplied an impossible combination.
+    removeExclusion(facet, (state.exclude[facet] ?? []).filter((value) => !values.includes(value)));
+    state.exclude[facet] = values;
+    if (!attributes[facet] && state.constraints[facet]) {
+      const keep = state.constraints[facet].filter((value) => !values.includes(value));
+      if (keep.length) state.constraints[facet] = keep;
+      else delete state.constraints[facet];
+    }
+    state.declined.delete(facet);
+    state.conflicts = state.conflicts.filter((conflict) => conflict.facet !== facet);
+  }
+  for (const [field, bound] of [['budget_min', 'min'], ['budget_max', 'max']]) {
+    if (!Object.prototype.hasOwnProperty.call(given, field)) continue;
+    const value = given[field];
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      state.rejected.push({ facet: field, value, reason: 'must be a finite nonnegative number' });
+      continue;
+    }
+    state.budget = { min: null, max: null, ...state.budget, [bound]: value };
   }
   for (const facet of given.no_preference ?? []) {
     if (cat.facetValues[facet]) state.declined.add(facet);
@@ -333,6 +408,28 @@ function canonical(facet, raw) {
   return values.find((v) => v.split(/[,&]/)[0].trim() === want) ?? null;
 }
 
+// Single-word refusals are enforced twice: by the recorded attribute and by
+// title words (for products missing that attribute). Treat both as one fact
+// when it is explicitly replaced or taken back, while keeping unrelated bans.
+function exclusionWords(facet, values) {
+  return new Set(values.flatMap((value) => [value, ...(state.catalog.facetForms?.[facet]?.[value] ?? [])])
+    .filter((form) => /^[a-z]+$/i.test(form)).flatMap(tokenize));
+}
+
+function removeExclusion(facet, values = state.exclude[facet] ?? []) {
+  const old = state.exclude[facet] ?? [];
+  const removed = old.filter((value) => values.includes(value));
+  if (!removed.length) return false;
+  const keep = old.filter((value) => !values.includes(value));
+  if (keep.length) state.exclude[facet] = keep;
+  else delete state.exclude[facet];
+  const words = exclusionWords(facet, removed);
+  const retained = new Set(Object.entries(state.exclude)
+    .flatMap(([key, list]) => [...exclusionWords(key, list)]));
+  state.excludeTerms = state.excludeTerms.filter((word) => !words.has(word) || retained.has(word));
+  return true;
+}
+
 function refine(facet, values, actor = 'agent', mode = 'require') {
   state.rejected = [];
   if (!facet || !values?.length) return snapshot();
@@ -346,7 +443,8 @@ function refine(facet, values, actor = 'agent', mode = 'require') {
     if (v) { if (!ok.includes(v)) ok.push(v); } else state.rejected.push({ facet, value: raw, reason: 'not in this catalogue' });
   }
   if (!ok.length) return snapshot();
-  if (mode === 'exclude') state.exclude[facet] = ok; else state.constraints[facet] = ok;
+  if (mode === 'exclude') state.exclude[facet] = [...new Set([...(state.exclude[facet] ?? []), ...ok])];
+  else state.constraints[facet] = ok;
   state.declined.delete(facet);
   state.shown = null;
   return evaluate(actor);
@@ -355,15 +453,23 @@ function refine(facet, values, actor = 'agent', mode = 'require') {
 function answerQuestion(values, actor = 'agent') {
   const pending = state.pending;
   if (!pending) return snapshot();
-  state.asks += 1;
-  const list = [].concat(values ?? []).filter((v) => v != null && v !== '' && v !== 'no_preference');
-  if (!list.length) {
+  const list = [].concat(values ?? []);
+  if (list.length === 1 && list[0] === 'no_preference') {
     // "No preference" still costs a turn — and is remembered, so the same
     // question cannot come straight back.
+    state.asks += 1;
+    state.rejected = [];
     state.declined.add(pending.facet);
     state.pending = null;
     return evaluate(actor, { skipped: pending.facet });
   }
+  if (!list.length) {
+    state.rejected = [{ facet: pending.facet, reason: 'answer required; choose a value or no_preference' }];
+    return snapshot();
+  }
+  // An invalid answer has not answered the question and must not spend one
+  // of the limited clarification turns. refine still reports rejected values.
+  if (list.some((value) => canonical(pending.facet, String(value)))) state.asks += 1;
   return refine(pending.facet, list, actor);
 }
 
@@ -373,6 +479,7 @@ function reset(actor = 'agent') {
     sort: 'relevance', optional: [], ignored: [], conflicts: [], claims: [], rejected: [],
     stated: new Set(), declined: new Set(), asks: 0, pending: null, scored: [], shown: null,
   });
+  notifyQuestionChange();
   el('q').value = '';
   render({ action: 'idle', reasons: ['Waiting for a search.'], pool: [] });
   return snapshot();
@@ -391,6 +498,7 @@ function parseOnly(text) {
     exclude: parsed.exclude,
     excludeWords: parsed.excludeTerms,
     budget: parsed.budget,
+    ...(parsed.budgetConflict ? { budgetConflict: parsed.budgetConflict } : {}),
     sort: parsed.sort,
     noPreference: parsed.noPreference,
     ignoredWords: parsed.ignored,
@@ -422,7 +530,7 @@ function revise(drop = [], dropAll = false, actor = 'agent') {
       if (state.sort !== 'relevance') { state.sort = 'relevance'; hit = true; }
     } else if (cat.facetValues[want]) {
       if (state.constraints[want]) { delete state.constraints[want]; hit = true; }
-      if (state.exclude[want]) { delete state.exclude[want]; hit = true; }
+      if (removeExclusion(want)) hit = true;
       if (state.declined.delete(want)) hit = true;
     } else {
       for (const facet of Object.keys(cat.facetValues)) {
@@ -433,11 +541,7 @@ function revise(drop = [], dropAll = false, actor = 'agent') {
           if (!state.constraints[facet].length) delete state.constraints[facet];
           hit = true;
         }
-        if (state.exclude[facet]?.includes(v)) {
-          state.exclude[facet] = without(state.exclude[facet], v);
-          if (!state.exclude[facet].length) delete state.exclude[facet];
-          hit = true;
-        }
+        if (removeExclusion(facet, [v])) hit = true;
       }
       const tok = tokenize(want)[0];
       if (tok && state.excludeTerms.includes(tok)) { state.excludeTerms = without(state.excludeTerms, tok); hit = true; }
@@ -459,6 +563,36 @@ function revise(drop = [], dropAll = false, actor = 'agent') {
 
 const STORE_KEY = 'counterask.v1';
 
+const isRecord = (value) => value != null && typeof value === 'object' && !Array.isArray(value);
+const storedStrings = (value, fallback = []) => [...new Set((Array.isArray(value) ? value : fallback)
+  .filter((item) => typeof item === 'string' && item.length > 0))];
+
+function storedFacets(value, fallback = {}) {
+  const out = {};
+  for (const [facet, values] of Object.entries(isRecord(value) ? value : fallback)) {
+    if (!Object.hasOwn(state.catalog.facetValues ?? {}, facet)) continue;
+    const accepted = storedStrings(values).filter((item) => state.catalog.facetValues[facet].includes(item));
+    if (accepted.length) out[facet] = accepted;
+  }
+  return out;
+}
+
+function storedOrder(order) {
+  if (!isRecord(order) || !['id', 'name', 'address'].every((key) => typeof order[key] === 'string' && order[key].trim())
+    || !Array.isArray(order.items) || !order.items.length || order.placedBy !== 'the shopper') return null;
+  const items = [];
+  for (const item of order.items) {
+    if (!isRecord(item) || typeof item.id !== 'string' || !item.id || typeof item.title !== 'string'
+      || !validQuantity(item.quantity) || !Number.isFinite(item.price) || item.price < 0) return null;
+    const lineTotal = +(item.price * item.quantity).toFixed(2);
+    if (!Number.isFinite(lineTotal) || item.lineTotal !== lineTotal) return null;
+    items.push({ id: item.id, title: item.title, quantity: item.quantity, price: item.price, lineTotal });
+  }
+  const total = +items.reduce((sum, item) => sum + item.lineTotal, 0).toFixed(2);
+  if (!Number.isFinite(total) || order.total !== total) return null;
+  return { id: order.id, name: order.name, address: order.address, items, total, placedBy: 'the shopper' };
+}
+
 function persist() {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
@@ -474,18 +608,39 @@ function persist() {
 function restore() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch { return false; }
-  if (!saved) return false;
+  if (!isRecord(saved)) return false;
   const cat = state.catalog;
-  if (Array.isArray(saved.cart)) state.cart = new Map(saved.cart.filter(([id]) => cat.byId.has(id)));
-  if (saved.order) state.order = saved.order;
-  if (!saved.said) return false;
+  if (Array.isArray(saved.cart)) state.cart = new Map(saved.cart.filter((entry) =>
+    Array.isArray(entry) && entry.length === 2 && cat.byId.has(entry[0]) && validQuantity(entry[1])));
+  state.order = storedOrder(saved.order);
+  // Validate each field independently: a damaged order or stale facet must
+  // not erase the shopper's other valid refinements, refusals, or cart lines.
+  const said = typeof saved.said === 'string' ? saved.said : '';
+  const parsed = said ? parseRequest(said, cat) : {};
+  const facetNames = (value, fallback) => storedStrings(value, fallback)
+    .filter((facet) => Object.hasOwn(cat.facetValues ?? {}, facet));
+  const budget = isRecord(saved.budget) ? saved.budget : (saved.budget === null ? null : parsed.budget);
+  const money = (value) => Number.isFinite(value) && value >= 0 ? value : null;
+  const min = money(budget?.min), max = money(budget?.max);
   Object.assign(state, {
-    said: saved.said, query: saved.query ?? '', constraints: saved.constraints ?? {}, exclude: saved.exclude ?? {},
-    excludeTerms: saved.excludeTerms ?? [], budget: saved.budget ?? null, sort: saved.sort ?? 'relevance',
-    optional: saved.optional ?? [], ignored: saved.ignored ?? [], conflicts: saved.conflicts ?? [],
-    claims: saved.claims ?? [], stated: new Set(saved.stated ?? []), declined: new Set(saved.declined ?? []),
-    asks: saved.asks ?? 0, rejected: [], shown: null,
+    said, query: typeof saved.query === 'string' ? saved.query : (parsed.query ?? ''),
+    constraints: storedFacets(saved.constraints, parsed.constraints), exclude: storedFacets(saved.exclude, parsed.exclude),
+    excludeTerms: storedStrings(saved.excludeTerms, parsed.excludeTerms),
+    budget: min != null || max != null ? { min, max } : null,
+    sort: SORTS.includes(saved.sort) ? saved.sort : (parsed.sort ?? 'relevance'),
+    optional: storedStrings(saved.optional, parsed.optional), ignored: storedStrings(saved.ignored, parsed.ignored),
+    conflicts: (Array.isArray(saved.conflicts) ? saved.conflicts : (parsed.conflicts ?? []))
+      .filter((item) => isRecord(item) && typeof item.facet === 'string' && typeof item.value === 'string'),
+    claims: (Array.isArray(saved.claims) ? saved.claims : (parsed.claims ?? []))
+      .filter((item) => isRecord(item) && typeof item.pass === 'string' && typeof item.said === 'string'
+        && (item.as == null || typeof item.as === 'string')),
+    stated: new Set(facetNames(saved.stated, Object.keys(parsed.constraints ?? {}))),
+    declined: new Set(facetNames(saved.declined, parsed.noPreference)),
+    asks: Number.isInteger(saved.asks) && saved.asks >= 0 ? Math.min(saved.asks, POLICY.maxAsks) : 0,
+    rejected: [], shown: null,
   });
+  if (!state.said && !state.query && !Object.keys(state.constraints).length && !Object.keys(state.exclude).length
+    && !state.excludeTerms.length && !state.budget && state.sort === 'relevance' && !state.declined.size) return false;
   el('q').value = state.said;
   evaluate('human', { resumed: 'from your last visit' });
   return true;
@@ -502,6 +657,7 @@ function evaluate(actor, extra = {}) {
   });
   const decision = decide(catalog, state.scored, state.constraints, state.asks, { declined: [...state.declined] });
   state.pending = decision.action === 'ask' ? decision : null;
+  notifyQuestionChange();
   render(decision, extra);
   return snapshot(decision, extra);
 }
@@ -563,7 +719,12 @@ function shownItems() {
 }
 
 function snapshot(decision, extra = {}) {
-  const d = decision || { action: state.pending ? 'ask' : 'answer', pool: state.scored.map((s) => s.item), reasons: [] };
+  const active = state.said || state.query || state.scored.length || Object.keys(state.constraints).length
+    || Object.keys(state.exclude).length || state.excludeTerms.length || state.budget
+    || state.sort !== 'relevance' || state.declined.size;
+  const d = decision || state.pending || (active
+    ? decide(state.catalog, state.scored, state.constraints, state.asks, { declined: [...state.declined] })
+    : { action: 'idle', pool: [], reasons: [] });
   const pool = d.pool ?? [];
   const top = shownItems();
 
@@ -579,10 +740,14 @@ function snapshot(decision, extra = {}) {
   };
   if (state.conflicts.length) understood.conflicts = state.conflicts;
   if (state.rejected.length) understood.rejected = state.rejected;
+  const budgetConflict = state.budget?.min != null && state.budget?.max != null && state.budget.min > state.budget.max
+    ? { min: state.budget.min, max: state.budget.max, reason: 'Minimum price exceeds maximum price.' } : null;
+  if (budgetConflict) understood.budgetConflict = budgetConflict;
 
   const caveats = [
     ...state.conflicts.map((c) => `"${c.value}" was both required and refused (same ${c.facet} in this catalogue); the requirement was kept.`),
     ...state.rejected.map((r) => `${r.facet}${r.value != null ? `=${r.value}` : ''} was ignored: ${r.reason}.`),
+    ...(budgetConflict ? [budgetConflict.reason] : []),
   ];
   const base = {
     request: state.said,
@@ -698,9 +863,12 @@ function renderChips() {
   }
   for (const [facet, values] of Object.entries(state.exclude)) {
     chip(`<b>not</b> ${esc(values.join(' / '))} <i>${esc(facet)}</i>`, 'no',
-      () => { delete state.exclude[facet]; }, `Stop excluding ${facet}`);
+      () => { removeExclusion(facet); }, `Stop excluding ${facet}`);
   }
+  const companionWords = new Set(Object.entries(state.exclude)
+    .flatMap(([facet, values]) => [...exclusionWords(facet, values)]));
   for (const word of state.excludeTerms) {
+    if (companionWords.has(word)) continue;
     chip(`<b>not</b> ${esc(word)}`, 'no',
       () => { state.excludeTerms = state.excludeTerms.filter((w) => w !== word); }, `Stop excluding ${word}`);
   }
@@ -733,7 +901,7 @@ function renderAsk(d) {
   const skip = document.createElement('button');
   skip.className = 'skip';
   skip.textContent = d.others ? `No preference · ${d.others} more under other values` : 'No preference';
-  skip.addEventListener('click', () => answerQuestion(null, 'human'));
+  skip.addEventListener('click', () => answerQuestion(['no_preference'], 'human'));
   opts.append(skip);
 }
 
@@ -771,8 +939,13 @@ function renderGrid(d) {
     return;
   }
   if (d.action === 'empty') {
-    el('statusTitle').textContent = 'No match';
+    const invalidBudget = state.budget?.min != null && state.budget?.max != null
+      && state.budget.min > state.budget.max;
+    el('statusTitle').textContent = invalidBudget ? 'Check your price range' : 'No match';
     el('statusN').textContent = '0 of 9,901';
+    empty.textContent = invalidBudget
+      ? `The minimum price ($${state.budget.min}) is above the maximum ($${state.budget.max}). Change your search or remove the price filter.`
+      : 'Nothing matches every stated requirement.';
     empty.hidden = false;
     return;
   }
@@ -791,7 +964,7 @@ function renderGrid(d) {
       .map(([, vals]) => `<span class="tag">${esc(vals[0])}</span>`).join('');
     const price = typeof it.p === 'number'
       ? `$${it.p.toFixed(2)}`
-      : (state.budget ? '<span class="dim">price not listed</span>' : '—');
+      : '<span class="dim">price not listed</span>';
     card.innerHTML = `
       <div class="t">${esc(it.t)}</div>
       ${it.b ? `<div class="brand2">${esc(it.b)}</div>` : ''}
@@ -864,12 +1037,23 @@ function formatCount(n) {
 // --- the surface WebMCP tools drive ------------------------------------
 
 const api = {
+  subscribeQuestion(listener) {
+    questionListeners.add(listener);
+    listener(Boolean(state.pending));
+    return () => questionListeners.delete(listener);
+  },
   search, refine, answerQuestion, reset, snapshot, parseOnly, revise,
   addToCart, removeFromCart, cart: () => cartSnapshot(),
   get state() { return state; },
   showProducts(ids) {
-    state.shown = ids.filter((id) => state.catalog.byId.has(id));
-    render({ action: 'answer', pool: state.scored.map((s) => s.item), reasons: ['Grid curated by the agent.'] });
+    if (!Array.isArray(ids)) return { ...snapshot(), error: 'Product ids must be an array from the current results.' };
+    const eligible = new Set(state.scored.map((s) => s.item.id));
+    const rejectedIds = ids.filter((id) => !eligible.has(id));
+    if (rejectedIds.length) {
+      return { ...snapshot(), rejectedIds, error: 'Only products matching the current search may be shown. The grid was not changed.' };
+    }
+    state.shown = [...new Set(ids)];
+    render(state.pending ?? { action: 'answer', pool: state.scored.map((s) => s.item), reasons: ['Grid curated by the agent.'] });
     return snapshot();
   },
   explain(id) {

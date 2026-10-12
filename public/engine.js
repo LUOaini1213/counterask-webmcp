@@ -134,23 +134,28 @@ export function extractConstraints(query, facetValues, facetForms = null) {
 // word read one way is never read again another way. What is left is the
 // product description, which is what the ranker wanted all along.
 
-const AMOUNT = String.raw`(\d+(?:\.\d+)?)(?![a-z0-9])(?!\s*(?:mm|cm|inch|inches|in\b|ft|feet|oz|lbs?|kg|ml|pack|packs|pairs?|pcs|pieces?|count|ct|x\b|"|”|%))`;
+const AMOUNT = String.raw`(?<![a-z0-9.,])((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?)(?![a-z0-9]|[,.]\d)(?!\s*(?:mm|cm|inch|inches|in\b|ft|feet|oz|lbs?|kg|ml|pack|packs|pairs?|pcs|pieces?|count|ct|x\b|"|”|%))`;
 const MONEY = String.raw`\$?\s?${AMOUNT}\s?(?:dollars?|bucks|usd)?`;
 const MARKED = String.raw`(?:\$\s?${AMOUNT}|${AMOUNT}\s?(?:dollars?|bucks|usd))`;
+const amount = (value) => Number(value.replace(/,/g, ''));
 const near = (n) => ({ min: Math.floor(n * 0.75), max: Math.ceil(n * 1.25) });
 const BUDGET_RULES = [
-  [String.raw`\b(?:between|from)\s+${MONEY}\s*(?:and|to|-|–)\s*${MONEY}`, (a, b) => ({ min: +a, max: +b })],
-  [String.raw`\$\s?${AMOUNT}\s?(?:-|–|to)\s?\$?\s?${AMOUNT}`, (a, b) => ({ min: +a, max: +b })],
-  [String.raw`\b${AMOUNT}\s?(?:-|–|to)\s?${AMOUNT}\s?(?:dollars|bucks|usd)\b`, (a, b) => ({ min: +a, max: +b })],
-  [String.raw`\b(?:under|below|less than|cheaper than|lower than|up to|at most|max(?:imum)?(?: of)?|no more than|not more than|not over|not above|within|budget(?: is| of)?|capped at)\s+${MONEY}`, (a) => ({ min: null, max: +a })],
-  [String.raw`\b(?:over|above|more than|at least|min(?:imum)?(?: of)?|starting (?:at|from)|upwards of|no less than|not less than|not under)\s+${MONEY}`, (a) => ({ min: +a, max: null })],
-  [String.raw`\b(?:have|got)\s+${MONEY}\s+to spend\b`, (a) => ({ min: null, max: +a })],
-  [String.raw`${MONEY}\s+to spend\b`, (a) => ({ min: null, max: +a })],
-  [String.raw`\b(?:have|got|spend|spending|pay|paying)\s+(?:about |around |up to )?${MARKED}`, (a, b) => ({ min: null, max: +(a ?? b) })],
-  [String.raw`\b(?:around|about|approximately|roughly|close to|near)\s+${MONEY}`, (a) => near(+a)],
-  [String.raw`${MONEY}\s+(?:or less|or under|or below|or cheaper|max|maximum|tops|at most|budget)\b`, (a) => ({ min: null, max: +a })],
-  [String.raw`${MONEY}\s+(?:or more|or above|or over|minimum|at least|and up)\b`, (a) => ({ min: +a, max: null })],
-  [String.raw`${MARKED}`, (a, b) => near(+(a ?? b))],
+  [String.raw`\b(?:between|from)\s+${MONEY}\s*(?:and|to|-|–)\s*${MONEY}`, (a, b) => ({ min: amount(a), max: amount(b) })],
+  [String.raw`\$\s?${AMOUNT}\s?(?:-|–|to)\s?\$?\s?${AMOUNT}`, (a, b) => ({ min: amount(a), max: amount(b) })],
+  [String.raw`\b${AMOUNT}\s?(?:-|–|to)\s?${AMOUNT}\s?(?:dollars|bucks|usd)\b`, (a, b) => ({ min: amount(a), max: amount(b) })],
+  // Read negated comparisons before their positive fragments: "not under"
+  // must not be claimed by the later "under" rule and become a ceiling.
+  [String.raw`\b(?:no more than|not more than|not over|not above)\s+${MONEY}`, (a) => ({ min: null, max: amount(a) })],
+  [String.raw`\b(?:no less than|not less than|not under|not below)\s+${MONEY}`, (a) => ({ min: amount(a), max: null })],
+  [String.raw`\b(?:under|below|less than|cheaper than|lower than|up to|at most|max(?:imum)?(?: of)?|within|budget(?: is| of)?|capped at)\s+${MONEY}`, (a) => ({ min: null, max: amount(a) })],
+  [String.raw`\b(?:over|above|more than|at least|min(?:imum)?(?: of)?|starting (?:at|from)|upwards of)\s+${MONEY}`, (a) => ({ min: amount(a), max: null })],
+  [String.raw`\b(?:have|got)\s+${MONEY}\s+to spend\b`, (a) => ({ min: null, max: amount(a) })],
+  [String.raw`${MONEY}\s+to spend\b`, (a) => ({ min: null, max: amount(a) })],
+  [String.raw`\b(?:have|got|spend|spending|pay|paying)\s+(?:about |around |up to )?${MARKED}`, (a, b) => ({ min: null, max: amount(a ?? b) })],
+  [String.raw`\b(?:around|about|approximately|roughly|close to|near)\s+${MONEY}`, (a) => near(amount(a))],
+  [String.raw`${MONEY}\s+(?:or less|or under|or below|or cheaper|max|maximum|tops|at most|budget)\b`, (a) => ({ min: null, max: amount(a) })],
+  [String.raw`${MONEY}\s+(?:or more|or above|or over|minimum|at least|and up)\b`, (a) => ({ min: amount(a), max: null })],
+  [String.raw`${MARKED}`, (a, b) => near(amount(a ?? b))],
 ].map(([re, fn]) => [new RegExp(re), fn]);
 
 const SORT_RULES = [
@@ -259,6 +264,14 @@ export function parseRequest(text, catalog) {
     constraints: {}, exclude: {}, excludeTerms: [], budget: null, sort: 'relevance',
     optional: [], ignored: [], conflicts: [], noPreference: [], claims: [],
   };
+  // Retain why a word was banned, so resolving a facet conflict does not
+  // leave its companion word ban active or erase an independent refusal.
+  const termSources = new Map();
+  const ban = (word, source = null) => {
+    if (!termSources.has(word)) termSources.set(word, new Set());
+    termSources.get(word).add(source);
+  };
+  const facetSource = (facet, value) => `${facet}\0${value}`;
   // Every span a pass takes is recorded with the words it took, so the
   // reading can be audited: "budget took 'under $40', refusal took 'not
   // leather'". Idea borrowed from the parallel implementation on the
@@ -286,19 +299,38 @@ export function parseRequest(text, catalog) {
   pass = 'budget';
   // Budget first: "not over $50" is a ceiling, not a refusal.
   for (const [re, fn] of BUDGET_RULES) {
-    const m = re.exec(s);
-    if (!m) continue;
-    out.budget = fn(...m.slice(1));
-    blank(m.index, m.index + m[0].length);
-    break;
+    let m;
+    while ((m = re.exec(s))) {
+      const next = fn(...m.slice(1));
+      const previous = out.budget ?? { min: null, max: null };
+      out.budget = {
+        min: next.min == null ? previous.min : previous.min == null ? next.min : Math.max(previous.min, next.min),
+        max: next.max == null ? previous.max : previous.max == null ? next.max : Math.min(previous.max, next.max),
+      };
+      blank(m.index, m.index + m[0].length);
+    }
+  }
+  if (out.budget?.min != null && out.budget?.max != null && out.budget.min > out.budget.max) {
+    out.budgetConflict = { ...out.budget, reason: 'Minimum price exceeds maximum price.' };
   }
   pass = 'ordering';
   for (const [re, sort] of SORT_RULES) {
-    const m = re.exec(s);
-    if (!m) continue;
-    out.sort = sort;
-    blank(m.index, m.index + m[0].length);
-    break;
+    let m;
+    while ((m = re.exec(s))) {
+      // "Not cheap belt" requests no positive ordering. Claim the negated
+      // adjective together with its cue, before a refusal can consume "belt".
+      const prefix = s.slice(0, m.index);
+      const cue = [...prefix.matchAll(new RegExp(NEG_CUE.source, 'g'))].at(-1);
+      const negated = cue && /^\s+(?:(?:a|an|the|too|very|really)\s+)*$/.test(prefix.slice(cue.index + cue[0].length));
+      if (negated) {
+        pass = 'ordering refusal';
+        blank(cue.index, m.index + m[0].length);
+        pass = 'ordering';
+        continue;
+      }
+      if (out.sort === 'relevance') out.sort = sort;
+      blank(m.index, m.index + m[0].length);
+    }
   }
 
   // Settings, before refusals can read "for work" as words to ban. A
@@ -351,6 +383,7 @@ export function parseRequest(text, catalog) {
     }
     const words = tokenize(rest).filter((t) => catalog.postings.has(t));
     if (!hits.length && !words.length) continue;
+    for (const word of words) ban(word);
     for (const h of hits) {
       const list = (out.exclude[h.facet] ??= []);
       if (!list.includes(h.value)) list.push(h.value);
@@ -360,9 +393,10 @@ export function parseRequest(text, catalog) {
       // big and tall" would take a Big Logo hoodie with them, and "short-sleeve"
       // would take every sleeve.
       const span = ext.slice(h.at, h.end).trim();
-      if (/^[a-z]+$/.test(span)) words.push(...tokenize(span).filter((t) => catalog.postings.has(t)));
+      if (/^[a-z]+$/.test(span)) {
+        for (const word of tokenize(span).filter((t) => catalog.postings.has(t))) ban(word, facetSource(h.facet, h.value));
+      }
     }
-    for (const t of words) if (!out.excludeTerms.includes(t)) out.excludeTerms.push(t);
     const endRel = Math.max(win.length, ...hits.map((h) => h.end));
     blank(cue.index, from + lead + endRel);
     NEG_CUE.lastIndex = from + lead + endRel;
@@ -389,10 +423,14 @@ export function parseRequest(text, catalog) {
   // back rather than silently emptying the pool.
   for (const [facet, values] of Object.entries(out.exclude)) {
     const clash = values.filter((v) => out.constraints[facet]?.includes(v));
-    for (const value of clash) out.conflicts.push({ facet, value });
+    for (const value of clash) {
+      out.conflicts.push({ facet, value });
+      for (const sources of termSources.values()) sources.delete(facetSource(facet, value));
+    }
     const left = values.filter((v) => !clash.includes(v));
     if (left.length) out.exclude[facet] = left; else delete out.exclude[facet];
   }
+  out.excludeTerms = [...termSources].filter(([, sources]) => sources.size).map(([word]) => word);
 
   for (const re of FILLER) s = s.replace(re, ' ');
 
@@ -538,6 +576,8 @@ export class Catalog {
     const exKeys = Object.keys(exclude ?? {}).filter((f) => exclude[f]?.length);
     const banned = (excludeTerms ?? []).filter((t) => this.postings.has(t));
     const cap = budget && (budget.max != null || budget.min != null) ? budget : null;
+    // No product, including an unpriced one, can satisfy an inverted range.
+    if (cap?.min != null && cap?.max != null && cap.min > cap.max) return [];
     const shelfMatch = shelf === 'off' ? null : this.matchShelf(required);
     const shelfSet = shelfMatch ? new Set(shelfMatch.shelf.items) : null;
 
