@@ -18,10 +18,12 @@
 //   node scripts/agentbench.mjs            # 800 targets, seeded
 //   node scripts/agentbench.mjs 2000
 //   node scripts/agentbench.mjs --holdout  # phrasings the parser was not tuned on
+//   node scripts/agentbench.mjs 400 --holdout --min-hit10=0.98 --listening   # exit 1 on a regression
 
 import { readFileSync } from 'node:fs';
 import * as engine from '../public/engine.js';
 import { mulberry32, queryFor, answerAs } from './bench.mjs';
+import { floorFailures, listeningFailures, report } from './floors.mjs';
 
 const cat = new engine.Catalog(JSON.parse(
   readFileSync(new URL('../public/data/catalog.json', import.meta.url), 'utf8')));
@@ -270,6 +272,7 @@ export function agentBench({ n = 800, seed = 2026, maxAsks = 3, holdout = false 
       redundantAsks: s.redundantAsks,
       reasksAfterDecline: s.reasks,
     },
+    counts: { ...s },
     misses,
     violations,
   };
@@ -279,7 +282,7 @@ if (process.argv[1]?.endsWith('agentbench.mjs')) {
   const args = process.argv.slice(2);
   const holdout = args.includes('--holdout');
   const n = Number(args.find((a) => /^\d+$/.test(a))) || 800;
-  const { summary, listening, misses, violations } = agentBench({ n, holdout });
+  const { summary, listening, counts, misses, violations } = agentBench({ n, holdout });
   console.log(holdout ? 'held-out phrasings' : 'tuning phrasings');
   console.log(summary);
   console.log(listening);
@@ -290,4 +293,5 @@ if (process.argv[1]?.endsWith('agentbench.mjs')) {
   for (const m of misses.slice(0, 12)) {
     console.log(`  rank=${String(m.rank || '-').padStart(5)} pool=${String(m.pool).padStart(4)}  "${m.sentence}"  ->  ${m.title}`);
   }
+  report([...floorFailures(summary, args), ...(args.includes('--listening') ? listeningFailures(counts) : [])]);
 }

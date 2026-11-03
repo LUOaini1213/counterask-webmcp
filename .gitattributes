@@ -1,0 +1,17 @@
+# Text files are stored and checked out with LF, so hashes, sizes and the
+# README check measure the same bytes on Windows and Linux.
+* text=auto eol=lf
+
+# Binary media, should any be added (the demo video is built, not committed).
+*.png  -text
+*.jpg  -text
+*.jpeg -text
+*.gif  -text
+*.mp3  -text
+*.mp4  -text
+*.wav  -text
+*.ttf  -text
+*.otf  -text
+*.woff -text
+*.woff2 -text
+*.pdf  -text
