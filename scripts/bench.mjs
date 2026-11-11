@@ -12,9 +12,11 @@
 //
 //   node scripts/bench.mjs            # 400 targets, seeded
 //   node scripts/bench.mjs 1000       # more targets
+//   node scripts/bench.mjs 400 --min-hit10=0.99 --min-hit1=0.86   # exit 1 below a floor
 
 import { readFileSync } from 'node:fs';
 import { Catalog, decide, parseRequest, tokenize } from '../public/engine.js';
+import { floorFailures, report } from './floors.mjs';
 
 const cat = new Catalog(JSON.parse(
   readFileSync(new URL('../public/data/catalog.json', import.meta.url), 'utf8')));
@@ -124,11 +126,13 @@ export function bench({ n = 400, seed = 2026, maxAsks = 3, patience = 1 } = {}) 
 }
 
 if (/[\\/]bench\.mjs$/.test(process.argv[1] ?? '')) {
-  const n = Number(process.argv[2]) || 400;
+  const args = process.argv.slice(2);
+  const n = Number(args.find((a) => /^\d+$/.test(a))) || 400;
   const { summary, misses } = bench({ n });
   console.log(summary);
   console.log(`\nmissed ${misses.length} (target not in top 10):`);
   for (const m of misses.slice(0, 10)) {
     console.log(`  rank=${String(m.rank || '-').padStart(5)} pool=${String(m.pool).padStart(4)}  "${m.query}"  ->  ${m.title}`);
   }
+  report(floorFailures(summary, args));
 }

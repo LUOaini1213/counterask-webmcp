@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { Catalog, decide, separation } from '../public/engine.js';
-import { QUERIES } from './eval.mjs';
-const cat = new Catalog(JSON.parse(readFileSync(new URL('../public/data/catalog.json', import.meta.url),'utf8')));
+import { Catalog, decide, separation } from '../../public/engine.js';
+import { QUERIES } from '../eval.mjs';
+const cat = new Catalog(JSON.parse(readFileSync(new URL('../../public/data/catalog.json', import.meta.url),'utf8')));
 
 // signature = the facet-value fingerprint of an item
 const sig = (it) => Object.entries(it.f).sort().map(([k,v])=>k+':'+[...v].sort().join('/')).join('|');

@@ -9,7 +9,12 @@ We keep the menswear slice (9,901 products), drop everything the ranker never
 reads, and pre-extract the attribute evidence the policy asks about, so the
 browser does no parsing beyond JSON.parse.
 
-    python scripts/build_catalog.py --source ../techjam-conversational-search/data/catalog.jsonl
+    python scripts/build_catalog.py --source /path/to/catalog.jsonl
+
+The 50,000-product source file is not part of this repository (see "Data" in
+the README), so this step cannot be re-run from a clean clone. Its output,
+public/data/catalog.json, is committed and is what the app, the tests and the
+benchmarks read. Python 3.11, standard library only.
 """
 
 from __future__ import annotations

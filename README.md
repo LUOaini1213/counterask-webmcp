@@ -4,8 +4,22 @@ A menswear storefront whose WebMCP tools return **a question** when answering
 would be a guess — and that reads a whole sentence the way an agent relays it:
 budget, refusals, stated attributes and all.
 
-Built for [The WebMCP Challenge](https://webmcp.devpost.com/).
+Built for [The WebMCP Challenge](https://webmcp.devpost.com/) (September 2026).
 9,901 real products. No server, no model call, no tokens.
+
+- **Built:** a static storefront whose `search_products` tool hands the agent
+  the one question worth asking when the candidates cannot be told apart, and
+  a rule-based parser that reads budgets, refusals and stated attributes.
+- **Found:** on 800 agent-style sentences it scores Hit@10 0.993 (Hit@1 0.904),
+  and on held-out phrasings the parser was not tuned on, 0.991, with no refusal
+  read as a requirement and no budget broken in the top 10. On the commit
+  before the parser, the keyword matcher scored Hit@10 0.793 and turned every
+  refusal into a requirement.
+- **Limits:** the parser is regular expressions, not a language model; the
+  benchmark shopper is simulated from each product's own record; only one
+  product in five has a price. Every figure here is in [`results/`](results/):
+  `npm run check` recomputes the current ones, and
+  `node scripts/history.mjs --check` rebuilds the 0.793 from the old commit.
 
 **Try it:** <https://luoaini1213.github.io/counterask-webmcp/> works as a search
 page in any modern browser. Search **belt**, answer the material question, then
@@ -14,42 +28,6 @@ The ChatGPT desktop browser or Chrome with WebMCP adds agent control; append
 `?agent=demo` to watch a labelled scripted demonstration in other browsers.
 
 ---
-
-## Demo cart behavior
-
-The cart is a local demonstration, not a live checkout: it does not charge or
-ship anything. Use made-up checkout details; the last demo order is remembered
-in this browser. Quantities must be whole numbers from 1 to 99 per product,
-including previous additions. Invalid additions return an error without changing
-the cart. Products with missing prices can be saved in the cart, but checkout
-stays disabled until they are removed. Tool results report `total: null` when
-any price is missing and `subtotal` for the priced items only. A visible cart
-link and live addition feedback keep the cart reachable on small screens.
-
-These cases, including corrupted saved cart entries, are covered by
-`scripts/cart_test.mjs`, which exercises the production cart handlers with a
-minimal DOM. `npm test` also runs on pull requests before any Pages deployment.
-
-### Keeping the conversation consistent
-
-The page owns the current question. Human clicks, restored sessions and agent
-calls all update the same state; viewing the cart or inspecting a parse does
-not close a pending question. Tool registrations are serialized so overlapping
-calls cannot register duplicate answer tools. Agent-curated grids must still
-respect the current search constraints.
-
-Budgets combine both bounds, including separately stated lower and upper
-limits. Contradictory bounds return no matches with a `budgetConflict` reason.
-Invalid answers preserve the pending question instead of spending a clarification
-turn. Saved sessions validate fields individually so one damaged value does not
-discard valid refinements or prevent the page from starting. Catalogue load
-failures show a retry instruction instead of leaving a silently broken page.
-
-Regression tests cover these transitions and malformed storage alongside the
-parser, retrieval benchmarks and scripted demo. The frozen catalogue still has
-many missing prices, and regex-based understanding does not cover arbitrary
-English. Benchmark hit rates are retrieval evidence, not proof that every request
-or human preference is understood.
 
 ## The idea
 
@@ -61,9 +39,9 @@ store's job is to **answer**.
 For most of a shopping conversation that assumption is wrong.
 
 Ask this catalog for "a belt" and 97 products match. Every one of them is a
-belt, and the top-ranked item beats the tenth by 5%. Ranking them is a coin
+belt, and the top-ranked item beats the tenth by 4%. Ranking them is a coin
 flip dressed up as a recommendation. One more fact — what it is made of —
-clears forty of them on average. The store knows this. It has the distribution
+clears ~49 of them on average. The store knows this. It has the distribution
 in front of it. But a tool that can only return products has no way to say so,
 so it returns its coin flip and lets the agent present a guess as an answer.
 
@@ -72,17 +50,17 @@ two things:
 
 ```jsonc
 // enough evidence
-{ "status": "answer", "products": [ … ], "candidates": 58,
-  "differentiators": [ { "facet": "closure", "splits": [ {"value":"buckle","count":11}, … ] } ],
-  "why": ["Best question would only clear ~8 of 58 candidates — not worth a turn."] }
+{ "status": "answer", "products": [ … ], "candidates": 63,
+  "differentiators": [ { "facet": "closure", "splits": [ {"value":"buckle","count":9}, … ] } ],
+  "why": ["Best question would only clear ~8 of 63 candidates — not worth a turn."] }
 
 // not enough evidence
 { "status": "need_more_evidence",
   "question": "What material are you after — leather, nylon, polyester, cotton?",
   "facet": "material",
-  "options": [ {"value":"leather","count":57}, … ],
-  "why": ["97 candidates, leader only 5% ahead.",
-          "Asking \"material\" clears ~40 of them on average (recorded on 89%)."],
+  "options": [ {"value":"leather","count":63}, … ],
+  "why": ["97 candidates, leader only 4% ahead.",
+          "Asking \"material\" clears ~49 of them on average (recorded on 93%)."],
   "note": "Answering now would be a guess. Put this question to the shopper, then call answer_question." }
 ```
 
@@ -93,7 +71,7 @@ convention reads the same thing.)
 The question is not a failure path. It is the store declining to guess on the
 shopper's behalf, and handing the agent the one question worth asking. And
 when the store *does* answer, it says what still separates the products it is
-showing, so the agent can summarise — "eleven buckle, one pull-on" — instead
+showing, so the agent can summarise — "nine buckle, one snap, one button" — instead
 of reading out a list.
 
 ## What an agent says is not what a search box gets
@@ -140,34 +118,40 @@ agent can check it before trusting the answer, and a person sees the same
 thing as chips above the grid.
 
 Measured on 800 sentences written from real product records
-([`scripts/agentbench.mjs`](scripts/agentbench.mjs)), before and after:
+([`scripts/agentbench.mjs`](scripts/agentbench.mjs)). The first two columns
+are the same 800 sentences on the same catalogue build: the commit before the
+parser (`97e9f51`, run with the benchmark from the next commit) and the commit
+that added it (`619981d`). The last column is the current code on the rebuilt
+attribute index below. The sentence generator changed along the way (sentences
+now state more attributes and sometimes wave a facet through), so the last
+column is not the same 800 sentences.
 
-| | keyword matcher | sentence parser |
-|---|---:|---:|
-| Hit@10 | 0.793 | **0.999** |
-| Hit@1 | 0.698 | **0.901** |
-| MRR | 0.738 | **0.939** |
-| refusals inverted into requirements | 100% | **0%** |
-| refused value shown in top 10 | 71% | **0%** |
-| budget broken in top 10 | 31% | **0%** |
-| questions asked about something already said or waved through | 0 | 0 |
-| questions re-asked after "no preference" | 12 | **0** |
+| | keyword matcher `97e9f51` | sentence parser `619981d` | current |
+|---|---:|---:|---:|
+| Hit@10 | 0.793 | 0.999 | **0.993** |
+| Hit@1 | 0.698 | 0.885 | **0.904** |
+| MRR | 0.738 | 0.934 | **0.937** |
+| refusals inverted into requirements | 100% | 0% | **0%** |
+| refused value shown in top 10 | 71% | 0% | **0%** |
+| budget broken in top 10 | 31% | 0% | **0%** |
+| questions asked about something already said | 0 | 0 | **0** |
+| questions re-asked after "no preference" | 12 | 0 | **0** |
+
+[`scripts/history.mjs`](scripts/history.mjs) rebuilds the first two columns
+from git history into [`results/history.json`](results/history.json) (it
+needs a full clone, not `--depth 1`);
+[`scripts/results.mjs`](scripts/results.mjs) writes the last one to
+[`results/bench_head.json`](results/bench_head.json).
 
 A parser tuned on its own templates can pass while failing the next phrasing
 a person tries, so the same 800 targets are also run under a second set of
 phrasings it was never tuned on (`--holdout`: "skip the", "avoid", "max $40",
 "I have 40 dollars to spend", "in the $20-$30 range", "not fussy about the
-closure"…). Those score Hit@10 0.998 with the same zero failures. And 61
-hand-written sentences in
+closure"…). On the current code those score Hit@10 0.991 · Hit@1 0.900 ·
+MRR 0.935 with the same zero failures. And 80 hand-written sentences in
 [`scripts/parse_test.mjs`](scripts/parse_test.mjs) pin down what must be read
 and what must be left alone: *no-show socks* refuse nothing, *size 10* is not a
 budget, *41mm* is not $41, *Under Armour* is a brand.
-
-Those numbers are from the catalogue build the parser was written against.
-On the rebuilt attribute index below, the same two benchmarks read: two-word
-shopper Hit@10 0.998 · Hit@1 0.849 · MRR 0.905; agent sentences Hit@10 0.993 ·
-Hit@1 0.904 · MRR 0.937 (held-out phrasings 0.991 · 0.900 · 0.935), listening
-checks still at zero.
 
 ## Why this is the right shape for WebMCP specifically
 
@@ -225,6 +209,11 @@ driving the live site through `document.modelContext` itself:
 - One implementation detail worth knowing: Chrome 152's `executeTool` takes
   its input as a JSON *string* and exposes `inputSchema` as one; tools still
   receive a parsed object.
+
+These observations were made by hand over the DevTools Protocol; no transcript
+of that session is committed. What the repository checks on every run is the
+same register / answer / unregister sequence against a stand-in
+`modelContext` ([`scripts/tools_test.mjs`](scripts/tools_test.mjs)).
 
 ## The tools
 
@@ -288,6 +277,9 @@ anything a shopper can say. Faux leather is its own value; closures gained
 slip-on, drawstring and elastic waist; occasions gained the sports; and a
 **color** facet was added from the same text.
 
+Share of the 9,901 products that record each facet, before (commit
+`796b926`, in `results/history.json`) and after the rebuild:
+
 | facet | recorded before | after |
 |---|---:|---:|
 | material | 56% | 69% |
@@ -325,8 +317,8 @@ distribution and `-Σp·log p` is meaningless. Counting expected survivors needs
 no such assumption and produces a number a shopper can read: *answering this
 cuts the pool by about this much.*
 
-*Missing is not a mismatch.* Only 5% of this catalog records a `fit` value. A
-naive gain calculation loves `fit` — asking it "removes 98% of candidates" —
+*Missing is not a mismatch.* Only 9% of this catalog records a `fit` value. A
+naive gain calculation loves `fit` — asking it "removes" over 90% of candidates —
 but it removes them for having no data, not for failing the requirement. So
 reduction is measured inside the covered subset and scaled by coverage, and any
 attribute recorded on under 45% of the pool is not asked about at all.
@@ -404,22 +396,29 @@ person's patience or a missing attribute. That is why the ask threshold is
 set in absolute candidates removed, and why a "clear leader" shortcut is not
 shipped — those were the two places measurement said no.
 
-The 2026-10-03 review ran the smaller `npm test` gate on the current code:
-400 keyword targets gave Hit@10 **1.000** and Hit@1 **0.875**; 400 held-out
-agent phrasings gave Hit@10 **0.985** and Hit@1 **0.890**, with zero measured
-budget/refusal violations. Six held-out targets still missed the top ten.
-The earlier figures above are historical larger benchmark runs, not a
-before/after comparison with this smaller review sample.
+`npm test` runs a smaller gate on every push and pull request: 400 keyword
+targets give Hit@10 **1.000** and Hit@1 **0.875**; 400 held-out agent
+phrasings give Hit@10 **0.985** and Hit@1 **0.890**, with zero budget or
+refusal violations (six held-out targets still miss the top ten). It fails if
+Hit@10 or Hit@1 drops below a floor (0.99 / 0.86 for keywords, 0.98 / 0.88
+for agent sentences) or if any listening check is not clean. `npm run check`
+reruns the 800-target figures above and fails if they, or any figure in this
+README's tables, drift from [`results/bench_head.json`](results/bench_head.json).
 
 Retrieval takes about two milliseconds a query on a laptop; the whole
-storefront is a 0.58 MB download.
+storefront is about 0.63 MiB gzipped.
 
 ## Running it
 
+Needs Node 20 or newer (CI uses Node 22 on Ubuntu and Windows) and, to serve
+the page with `npm start`, Python 3. There are no npm dependencies to install.
+
 ```bash
-python scripts/build_catalog.py --source /path/to/catalog.jsonl   # optional, output is committed
-python -m http.server 5173 --directory public                     # or: npm start, npx serve public
-npm test                                                          # state, cart, parser, tools and both benchmarks
+python -m http.server 5173 --directory public   # or: npm start, npx serve public
+npm test                     # state, cart, parser, tools and both benchmarks, with floors
+npm run check                # README figures against results/, plus a local-path scan
+npm run bench                # the 800-target benchmarks quoted above
+node scripts/history.mjs --check   # the historical columns (needs full git history)
 ```
 
 Then open `http://localhost:5173` in the **ChatGPT desktop app's in-app
@@ -478,17 +477,72 @@ scripts/
   tools_test.mjs    the WebMCP surface, with a stand-in modelContext
   smoke.mjs         policy behaviour on the sample queries
   eval.mjs          pool sizes, ask rate, timing across 50 queries
+  floors.mjs        the floors bench.mjs and agentbench.mjs enforce under npm test
+  results.mjs       writes results/bench_head.json; --check also matches it against this README
+  history.mjs       rebuilds results/history.json from the pre-parser and pre-rebuild commits
+  hygiene_check.mjs no local machine paths in tracked files
+  experiments/      one-off tuning measurements, each described in its README
+  video/            the CDP driver used to record the demo
+results/
+  bench_head.json   the current figures
+  history.json      the historical columns
+submission/         the challenge submission text and video plan, archived as submitted
 ```
+
+## Engineering notes
+
+### Demo cart behavior
+
+The cart is a local demonstration, not a live checkout: it does not charge or
+ship anything. Use made-up checkout details; the last demo order is remembered
+in this browser. Quantities must be whole numbers from 1 to 99 per product,
+including previous additions. Invalid additions return an error without changing
+the cart. Products with missing prices can be saved in the cart, but checkout
+stays disabled until they are removed. Tool results report `total: null` when
+any price is missing and `subtotal` for the priced items only. A visible cart
+link and live addition feedback keep the cart reachable on small screens.
+
+These cases, including corrupted saved cart entries, are covered by
+`scripts/cart_test.mjs`, which exercises the production cart handlers with a
+minimal DOM. `npm test` also runs on pull requests before any Pages deployment.
+
+### Keeping the conversation consistent
+
+The page owns the current question. Human clicks, restored sessions and agent
+calls all update the same state; viewing the cart or inspecting a parse does
+not close a pending question. Tool registrations are serialized so overlapping
+calls cannot register duplicate answer tools. Agent-curated grids must still
+respect the current search constraints.
+
+Budgets combine both bounds, including separately stated lower and upper
+limits. Contradictory bounds return no matches with a `budgetConflict` reason.
+Invalid answers preserve the pending question instead of spending a clarification
+turn. Saved sessions validate fields individually so one damaged value does not
+discard valid refinements or prevent the page from starting. Catalogue load
+failures show a retry instruction instead of leaving a silently broken page.
+
+Regression tests cover these transitions and malformed storage alongside the
+parser, retrieval benchmarks and scripted demo. The frozen catalogue still has
+many missing prices, and regex-based understanding does not cover arbitrary
+English. Benchmark hit rates are retrieval evidence, not proof that every request
+or human preference is understood.
 
 ## Data
 
 Products are the menswear slice (level-2 category `Men`) of the frozen
 50,000-product catalog derived from **Amazon Reviews 2023**, McAuley Lab, UCSD.
-9,901 items, 2.4 MB raw / 0.58 MB gzipped — the whole storefront ships to the
+9,901 items, 2.4 MiB raw / 0.58 MiB gzipped — the whole storefront ships to the
 client. Prices exist for one product in five; a budget excludes what is priced
 outside it and keeps what is unpriced, ranked after. There is no ranking model
 and no training: demand is proxied by log-scaled review volume, because a
 frozen catalog has no click log.
+
+The 50,000-product source file is not in this repository, so
+`scripts/build_catalog.py` (Python 3.11, standard library only:
+`python scripts/build_catalog.py --source /path/to/catalog.jsonl`) cannot be
+re-run from a clean clone. Everything else (the app, the tests and every
+benchmark) reads the committed `public/data/catalog.json`, whose SHA-256 is
+recorded in `results/bench_head.json`.
 
 ## A parallel implementation
 

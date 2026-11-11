@@ -1,9 +1,9 @@
 // Changing the scorer moved the separation distribution 7.6x, which silently
 // invalidated decisiveSeparation — a threshold calibrated against the old
 // scorer's percentiles. Re-fit both together rather than one after the other.
-import { POLICY, setBm25B, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
-import { run as sweep } from './eval.mjs';
+import { POLICY, setBm25B, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
+import { run as sweep } from '../eval.mjs';
 setShelfMode('off');
 const score = (h, m, t) => 0.5 * h + 0.3 * m + 0.2 * Math.max(0, Math.min(1, (11 - t) / 10));
 const rows = [];

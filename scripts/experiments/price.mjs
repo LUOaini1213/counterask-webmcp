@@ -6,9 +6,9 @@
 // this exact task as 0.5*Hit@10 + 0.3*MRR + 0.2*Efficiency, with
 // Efficiency = clip((11 - turns)/10, 0, 1) — one extra turn costs 0.02. Under
 // that rule the threshold stops being taste and becomes an argmax.
-import { POLICY, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
-import { run as sweep } from './eval.mjs';
+import { POLICY, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
+import { run as sweep } from '../eval.mjs';
 
 setShelfMode('off');
 const score = (h, m, turns) => 0.5 * h + 0.3 * m + 0.2 * Math.max(0, Math.min(1, (11 - turns) / 10));

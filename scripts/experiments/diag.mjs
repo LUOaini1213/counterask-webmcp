@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { Catalog, splitValue, separation, POLICY } from '../public/engine.js';
-const payload = JSON.parse(readFileSync(new URL('../public/data/catalog.json', import.meta.url),'utf8'));
+import { Catalog, splitValue, separation, POLICY } from '../../public/engine.js';
+const payload = JSON.parse(readFileSync(new URL('../../public/data/catalog.json', import.meta.url),'utf8'));
 const cat = new Catalog(payload);
 for (const q of ['wallet','belt','running shoes','leather belt']) {
   const scored = cat.search(q, {});

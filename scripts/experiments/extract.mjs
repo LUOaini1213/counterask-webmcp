@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { Catalog, extractConstraints, decide } from '../public/engine.js';
-import { QUERIES } from './eval.mjs';
-const cat = new Catalog(JSON.parse(readFileSync(new URL('../public/data/catalog.json', import.meta.url),'utf8')));
+import { Catalog, extractConstraints, decide } from '../../public/engine.js';
+import { QUERIES } from '../eval.mjs';
+const cat = new Catalog(JSON.parse(readFileSync(new URL('../../public/data/catalog.json', import.meta.url),'utf8')));
 let hits=0, poolBefore=0, poolAfter=0, askBefore=0, askAfter=0;
 for (const q of QUERIES) {
   const c = extractConstraints(q, cat.facetValues, cat.facetForms);

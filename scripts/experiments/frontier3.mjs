@@ -1,6 +1,6 @@
-import { POLICY, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
-import { run as sweep } from './eval.mjs';
+import { POLICY, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
+import { run as sweep } from '../eval.mjs';
 setShelfMode('off');
 const rows = [];
 for (const minRemoved of [20, 30, 45, 60, 90, 130]) {
