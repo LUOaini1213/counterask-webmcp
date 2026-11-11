@@ -17,8 +17,9 @@ Built for [The WebMCP Challenge](https://webmcp.devpost.com/) (September 2026).
   refusal into a requirement.
 - **Limits:** the parser is regular expressions, not a language model; the
   benchmark shopper is simulated from each product's own record; only one
-  product in five has a price. Every figure here is in [`results/`](results/)
-  and is rechecked by `npm run check`.
+  product in five has a price. Every figure here is in [`results/`](results/):
+  `npm run check` recomputes the current ones, and
+  `node scripts/history.mjs --check` rebuilds the 0.793 from the old commit.
 
 **Try it:** <https://luoaini1213.github.io/counterask-webmcp/> works as a search
 page in any modern browser. Search **belt**, answer the material question, then
