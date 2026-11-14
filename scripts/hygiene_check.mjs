@@ -19,6 +19,7 @@ export const PATTERNS = [
   [/%LOCALAPPDATA%|\$env:LOCALAPPDATA|AppData[\\/]+Local/i, 'Windows per-user AppData path'],
   [/(^|[\s'"`(])\/home\/[a-z_][\w.-]*\//, 'Linux home directory path'],
   [/(^|[\s'"`(])\/Users\/[A-Za-z][\w.-]*\//, 'macOS home directory path'],
+  [/(^|[\s'"`(=])\/(mnt\/)?[A-Za-z]\/Users\/[^\\/\s'"`]+/, 'Git Bash or WSL user profile path'],
   [/scratchpad[\\/]/i, 'session scratchpad path'],
   [/\.\.[\\/]+techjam-conversational-search/, 'path into a sibling private checkout'],
 ];
