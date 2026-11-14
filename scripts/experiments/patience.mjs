@@ -1,6 +1,6 @@
 // How much should the store ask, if shoppers do not always answer?
-import { POLICY, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
+import { POLICY, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
 setShelfMode('off');
 const score = (h, m, t) => 0.5 * h + 0.3 * m + 0.2 * Math.max(0, Math.min(1, (11 - t) / 10));
 const out = [];

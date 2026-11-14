@@ -1,5 +1,9 @@
 # Devpost submission text — Counterask
 
+> **Archived.** The text as submitted to the WebMCP Challenge on 2026-09-04.
+> Counts and figures in it describe the submitted build (for example 61 parser
+> cases, since grown to 80); the README has the current, checked numbers.
+
 Paste-ready. The four headed sections are the four things the challenge asks
 the description to explain, in the order it asks for them.
 

@@ -903,7 +903,7 @@ export function separation(scored) {
 }
 
 // How the category tree is used by default. Set from measurement, not taste:
-// see scripts/shelf_ab.mjs.
+// see scripts/experiments/shelf_ab.mjs.
 export let SHELF_MODE = 'off';
 export function setShelfMode(mode) { SHELF_MODE = mode; }
 

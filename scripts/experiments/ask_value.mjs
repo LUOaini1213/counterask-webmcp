@@ -4,8 +4,8 @@
 // Our earlier sweep said the opposite. The difference should be headroom: they
 // were already at Hit@10 0.995 before asking, so a question could only cost a
 // turn. BM25 moved our no-ask baseline, so the question has to be re-asked.
-import { POLICY, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
+import { POLICY, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
 setShelfMode('off');
 const score = (h, m, t) => 0.5 * h + 0.3 * m + 0.2 * Math.max(0, Math.min(1, (11 - t) / 10));
 

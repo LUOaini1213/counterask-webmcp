@@ -23,13 +23,28 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          # history.mjs rebuilds the README's historical columns from old commits.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # Unit tests, then both benchmarks with floors on Hit@10, Hit@1 and
+      # every listening check.
       - run: npm test
+      # The 800-target figures, every README table figure, and no local paths.
+      - run: npm run check
+      # The keyword-matcher and pre-rebuild columns, rebuilt from git history.
+      - run: node scripts/history.mjs --check
+      # The exploratory scripts still run against the current engine.
+      - run: npm run experiments
 
   deploy:
     if: github.event_name != 'pull_request'

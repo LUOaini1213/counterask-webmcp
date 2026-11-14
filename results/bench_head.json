@@ -1,0 +1,319 @@
+{
+  "generated_by": "node scripts/results.mjs",
+  "note": "Seeded (2026). bench = two- or three-word shopper; agentbench = agent-relayed sentences; holdout = phrasings the parser was not tuned on. Sizes are LF-normalised bytes, gzip at the zlib default level.",
+  "catalog": {
+    "items": 9901,
+    "sha256_lf": "38343ede831723c67b847edfd8251e2571764b9b4b6054b6e3cfc75d34f944c5",
+    "coverage_pct": {
+      "material": 68.5,
+      "closure": 40.6,
+      "occasion": 35,
+      "fit": 9.3,
+      "color": 41.2
+    },
+    "priced_pct": 19.6
+  },
+  "bench_400": {
+    "targets": 400,
+    "Hit@10": 1,
+    "Hit@1": 0.875,
+    "MRR": 0.9233,
+    "meanTurns": 1.14,
+    "askRate": "14%"
+  },
+  "agentbench_400_holdout": {
+    "summary": {
+      "targets": 400,
+      "Hit@10": 0.985,
+      "Hit@1": 0.89,
+      "MRR": 0.9256,
+      "meanTurns": 1.067,
+      "askRate": "6.8%"
+    },
+    "listening": {
+      "statedHeard": "100.0% of 353",
+      "wavedThroughHeard": "100.0% of 112",
+      "negationInverted": "0.0% of 106",
+      "negationViolatedInTop10": "0.0% of 106",
+      "budgetViolatedInTop10": "0.0% of 40",
+      "redundantAsks": 0,
+      "reasksAfterDecline": 0
+    }
+  },
+  "bench_800": {
+    "targets": 800,
+    "Hit@10": 0.9975,
+    "Hit@1": 0.8488,
+    "MRR": 0.9051,
+    "meanTurns": 1.131,
+    "askRate": "13%"
+  },
+  "agentbench_800": {
+    "summary": {
+      "targets": 800,
+      "Hit@10": 0.9925,
+      "Hit@1": 0.9038,
+      "MRR": 0.9373,
+      "meanTurns": 1.075,
+      "askRate": "7.5%"
+    },
+    "listening": {
+      "statedHeard": "100.0% of 707",
+      "wavedThroughHeard": "100.0% of 247",
+      "negationInverted": "0.0% of 207",
+      "negationViolatedInTop10": "0.0% of 207",
+      "budgetViolatedInTop10": "0.0% of 72",
+      "redundantAsks": 0,
+      "reasksAfterDecline": 0
+    }
+  },
+  "agentbench_800_holdout": {
+    "summary": {
+      "targets": 800,
+      "Hit@10": 0.9912,
+      "Hit@1": 0.9,
+      "MRR": 0.9347,
+      "meanTurns": 1.074,
+      "askRate": "7.4%"
+    },
+    "listening": {
+      "statedHeard": "100.0% of 707",
+      "wavedThroughHeard": "100.0% of 247",
+      "negationInverted": "0.0% of 207",
+      "negationViolatedInTop10": "0.0% of 207",
+      "budgetViolatedInTop10": "0.0% of 72",
+      "redundantAsks": 0,
+      "reasksAfterDecline": 0
+    }
+  },
+  "parse_cases": {
+    "passed": 80,
+    "total": 80
+  },
+  "examples": {
+    "belt": {
+      "action": "ask",
+      "pool": 97,
+      "reasons": [
+        "97 candidates, leader only 4% ahead.",
+        "Asking \"material\" clears ~49 of them on average (recorded on 93%).",
+        "Not asking \"fit\": recorded on only 8% of these — it would remove products for having no data, not for failing.",
+        "Not asking \"care\": recorded on only 22% of these — it would remove products for having no data, not for failing."
+      ],
+      "facet": "material",
+      "options": [
+        {
+          "value": "leather",
+          "count": 63
+        },
+        {
+          "value": "nylon",
+          "count": 11
+        },
+        {
+          "value": "polyester",
+          "count": 9
+        },
+        {
+          "value": "cotton",
+          "count": 7
+        }
+      ]
+    },
+    "leather belt": {
+      "action": "answer",
+      "pool": 63,
+      "reasons": [
+        "Best question would only clear ~8 of 63 candidates — not worth a turn."
+      ],
+      "differentiators": [
+        {
+          "facet": "closure",
+          "splits": [
+            {
+              "value": "buckle",
+              "count": 9
+            },
+            {
+              "value": "snap",
+              "count": 1
+            },
+            {
+              "value": "button",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "facet": "kind",
+          "splits": [
+            {
+              "value": "belts",
+              "count": 11
+            },
+            {
+              "value": "ties, cummerbunds & pocket squares",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    },
+    "running shoes": {
+      "action": "ask",
+      "pool": 728,
+      "reasons": [
+        "728 candidates, leader only 7% ahead.",
+        "Asking \"kind\" clears ~518 of them on average (recorded on 100%).",
+        "Not asking \"closure\": recorded on only 16% of these — it would remove products for having no data, not for failing.",
+        "Not asking \"fit\": recorded on only 1% of these — it would remove products for having no data, not for failing."
+      ],
+      "facet": "kind",
+      "options": [
+        {
+          "value": "running",
+          "count": 304
+        },
+        {
+          "value": "shoes",
+          "count": 85
+        },
+        {
+          "value": "team sports",
+          "count": 76
+        },
+        {
+          "value": "walking",
+          "count": 54
+        }
+      ]
+    },
+    "waterproof hiking boots, no laces": {
+      "action": "ask",
+      "pool": 56,
+      "reasons": [
+        "56 candidates, leader only 7% ahead.",
+        "Asking \"kind\" clears ~32 of them on average (recorded on 91%).",
+        "Not asking \"closure\": recorded on only 9% of these — it would remove products for having no data, not for failing.",
+        "Not asking \"origin\": recorded on only 39% of these — it would remove products for having no data, not for failing."
+      ],
+      "facet": "kind",
+      "options": [
+        {
+          "value": "hiking & trekking",
+          "count": 27
+        },
+        {
+          "value": "work & utility",
+          "count": 13
+        },
+        {
+          "value": "shoes",
+          "count": 3
+        },
+        {
+          "value": "rain",
+          "count": 2
+        }
+      ]
+    },
+    "a wallet that is not leather, under $30": {
+      "action": "ask",
+      "pool": 30,
+      "reasons": [
+        "30 candidates, leader only 13% ahead.",
+        "Asking \"kind\" clears ~17 of them on average (recorded on 100%).",
+        "Not asking \"material\": recorded on only 23% of these — it would remove products for having no data, not for failing.",
+        "Not asking \"closure\": recorded on only 33% of these — it would remove products for having no data, not for failing."
+      ],
+      "facet": "kind",
+      "options": [
+        {
+          "value": "wallets",
+          "count": 18
+        },
+        {
+          "value": "card & id cases",
+          "count": 8
+        },
+        {
+          "value": "sunglasses",
+          "count": 1
+        },
+        {
+          "value": "keyrings & keychains",
+          "count": 1
+        }
+      ]
+    },
+    "cheapest wool sweater": {
+      "action": "ask",
+      "pool": 21,
+      "reasons": [
+        "21 candidates, leader only 7% ahead.",
+        "Asking \"kind\" clears ~12 of them on average (recorded on 95%).",
+        "Not asking \"fit\": recorded on only 14% of these — it would remove products for having no data, not for failing.",
+        "Not asking \"occasion\": recorded on only 19% of these — it would remove products for having no data, not for failing."
+      ],
+      "facet": "kind",
+      "options": [
+        {
+          "value": "pullovers",
+          "count": 12
+        },
+        {
+          "value": "cardigans",
+          "count": 3
+        },
+        {
+          "value": "sweaters",
+          "count": 2
+        },
+        {
+          "value": "vests",
+          "count": 2
+        }
+      ]
+    },
+    "I'm looking for a leather belt, nothing with a snap, not over $50": {
+      "action": "answer",
+      "pool": 56,
+      "reasons": [
+        "Best question would only clear ~8 of 56 candidates — not worth a turn."
+      ],
+      "differentiators": [
+        {
+          "facet": "closure",
+          "splits": [
+            {
+              "value": "buckle",
+              "count": 10
+            },
+            {
+              "value": "pull-on",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "facet": "origin",
+          "splits": [
+            {
+              "value": "imported",
+              "count": 7
+            },
+            {
+              "value": "made in usa",
+              "count": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "size_bytes": {
+    "catalog_raw": 2525914,
+    "catalog_gzip": 610308,
+    "public_gzip": 658414
+  }
+}

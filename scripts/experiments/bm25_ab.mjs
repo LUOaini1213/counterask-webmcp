@@ -1,6 +1,6 @@
-import { setBm25B, setShelfMode, separation, Catalog } from '../public/engine.js';
-import { bench } from './bench.mjs';
-import { run as sweep } from './eval.mjs';
+import { setBm25B, setShelfMode, separation, Catalog } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
+import { run as sweep } from '../eval.mjs';
 setShelfMode('off');
 const rows = [];
 for (const b of [0, 0.3, 0.5, 0.75, 0.9]) {

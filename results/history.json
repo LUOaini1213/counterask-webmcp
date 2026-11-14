@@ -1,0 +1,102 @@
+{
+  "generated_by": "node scripts/history.mjs",
+  "note": "keyword = the engine at 97e9f51 run with the agent benchmark from 619981d; parser = 619981d; preIndex = 796b926, the last commit before the attribute index rebuild. Seeded (2026), 800 targets.",
+  "keyword": {
+    "commit": "97e9f511bff82a14842d0174beb8b30b3e6d5a0f",
+    "agentbench_800": {
+      "summary": {
+        "targets": 800,
+        "Hit@10": 0.7925,
+        "Hit@1": 0.6975,
+        "MRR": 0.7381,
+        "meanTurns": 1.391,
+        "askRate": "39.1%"
+      },
+      "listening": {
+        "statedHeard": "100.0% of 606",
+        "negationInverted": "100.0% of 165",
+        "negationViolatedInTop10": "70.9% of 165",
+        "budgetViolatedInTop10": "31.0% of 84",
+        "redundantAsks": 0,
+        "reasksAfterDecline": 12
+      }
+    }
+  },
+  "parser": {
+    "commit": "619981dc1bda2a3b94575d580aab1afc8f24ab1e",
+    "agentbench_800": {
+      "summary": {
+        "targets": 800,
+        "Hit@10": 0.9988,
+        "Hit@1": 0.885,
+        "MRR": 0.9337,
+        "meanTurns": 1.07,
+        "askRate": "7.0%"
+      },
+      "listening": {
+        "statedHeard": "100.0% of 606",
+        "negationInverted": "0.0% of 165",
+        "negationViolatedInTop10": "0.0% of 165",
+        "budgetViolatedInTop10": "0.0% of 84",
+        "redundantAsks": 0,
+        "reasksAfterDecline": 0
+      }
+    }
+  },
+  "preIndex": {
+    "commit": "796b926186fb143511230e4db21939d4a39d8eb5",
+    "bench_800": {
+      "targets": 800,
+      "Hit@10": 0.995,
+      "Hit@1": 0.8413,
+      "MRR": 0.8979,
+      "meanTurns": 1.101,
+      "askRate": "10%"
+    },
+    "agentbench_800": {
+      "summary": {
+        "targets": 800,
+        "Hit@10": 0.9988,
+        "Hit@1": 0.9012,
+        "MRR": 0.9389,
+        "meanTurns": 1.064,
+        "askRate": "6.4%"
+      },
+      "listening": {
+        "statedHeard": "99.8% of 636",
+        "wavedThroughHeard": "100.0% of 267",
+        "negationInverted": "0.0% of 165",
+        "negationViolatedInTop10": "0.0% of 165",
+        "budgetViolatedInTop10": "0.0% of 81",
+        "redundantAsks": 0,
+        "reasksAfterDecline": 0
+      }
+    },
+    "agentbench_800_holdout": {
+      "summary": {
+        "targets": 800,
+        "Hit@10": 0.9975,
+        "Hit@1": 0.8988,
+        "MRR": 0.9369,
+        "meanTurns": 1.064,
+        "askRate": "6.4%"
+      },
+      "listening": {
+        "statedHeard": "100.0% of 636",
+        "wavedThroughHeard": "100.0% of 267",
+        "negationInverted": "0.0% of 165",
+        "negationViolatedInTop10": "0.0% of 165",
+        "budgetViolatedInTop10": "0.0% of 81",
+        "redundantAsks": 0,
+        "reasksAfterDecline": 0
+      }
+    },
+    "coverage_pct": {
+      "material": 55.6,
+      "closure": 31.4,
+      "occasion": 24.8,
+      "fit": 7.6,
+      "color": 0
+    }
+  }
+}

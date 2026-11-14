@@ -3,9 +3,9 @@
 //
 // What we want: ask rate down, Hit@10 and MRR unmoved. Anywhere those two
 // disagree, the question is not paying for its turn.
-import { POLICY, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
-import { run as sweep } from './eval.mjs';
+import { POLICY, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
+import { run as sweep } from '../eval.mjs';
 
 setShelfMode('off');
 const rows = [];

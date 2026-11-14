@@ -1,5 +1,10 @@
 # Demo video — production plan (hand-off)
 
+> **Archived.** The plan written for the WebMCP Challenge submission on
+> 2026-09-04, kept as a record of how the video was produced. Figures and
+> tool counts in it are those of the submitted build; the README has the
+> current ones.
+
 Written 2026-09-04 01:35 +0800 for whoever produces the video next. Nothing
 here has been recorded yet. Everything needed is on this machine; the plan is
 sized to fit **~75 minutes of production + 15 minutes upload**, because the
@@ -24,9 +29,9 @@ Record the **real WebMCP path**, not the stand-in: Chrome for Testing 152 with
 driven over the DevTools Protocol so every scene is deterministic and
 re-runnable. Frames come from `Page.captureScreenshot` at ~12 fps; narration
 comes from `edge-tts`; ffmpeg assembles. This is the same pipeline shape as
-`../techjam-conversational-search/scripts/build_demo_video.py` (edge-tts +
-Pillow + ffmpeg), which can be borrowed from for the title card and the
-concat step — but frames here are screenshots of the live page, not slides.
+an earlier private TechJam demo-video builder (edge-tts + Pillow + ffmpeg),
+which can be borrowed from for the title card and the concat step — but
+frames here are screenshots of the live page, not slides.
 
 Fallback if the scripted route stalls after 20 minutes: open the same Chrome
 window, record with **Win + G (Game Bar)**, narrate live from the script
@@ -36,9 +41,9 @@ below, trim in ffmpeg. Quality is lower; it is still a valid submission.
 
 | what | where |
 |---|---|
-| Chrome for Testing 152 (no install, no admin) | `%LOCALAPPDATA%\Temp\claude\C--Users-LW-Desktop----nus----\68b4661d-d52a-4f21-8561-5adacca24b91\scratchpad\chrome-win64\chrome.exe` |
+| Chrome for Testing 152 (no install, no admin) | `<work-dir>/chrome-win64/chrome.exe`, where `<work-dir>` is any local folder the unzipped Chrome for Testing build was placed in |
 | profile with the flag pre-set (`Local State` → `enabled_labs_experiments: ["enable-webmcp-testing@1"]`) | same folder, `chrome-profile\` |
-| CDP driver: evaluate JS / navigate / clear cache / click | `scripts/video/cdp.mjs` (copied from the scratchpad) |
+| CDP driver: evaluate JS / navigate / clear cache / click | `scripts/video/cdp.mjs` |
 | CDP screenshot | `scripts/video/cdp_shot.mjs` |
 | ffmpeg 9.0.1 | on PATH |
 | Python 3 with Pillow 12 and `edge_tts` | `python` |
@@ -48,7 +53,7 @@ below, trim in ffmpeg. Quality is lower; it is still a valid submission.
 Launch the browser (PowerShell):
 
 ```powershell
-$sp  = "$env:LOCALAPPDATA\Temp\claude\C--Users-LW-Desktop----nus----\68b4661d-d52a-4f21-8561-5adacca24b91\scratchpad"
+$sp  = "<work-dir>"   # the folder that holds chrome-win64 and chrome-profile
 Start-Process "$sp\chrome-win64\chrome.exe" -ArgumentList @('--remote-debugging-port=9222', "--user-data-dir=$sp\chrome-profile", '--no-first-run', '--no-default-browser-check', '--window-size=1600,900', '--hide-scrollbars', 'https://luoaini1213.github.io/counterask-webmcp/?v=1')
 ```
 

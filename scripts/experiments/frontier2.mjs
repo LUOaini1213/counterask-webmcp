@@ -1,6 +1,6 @@
-import { POLICY, setShelfMode } from '../public/engine.js';
-import { bench } from './bench.mjs';
-import { run as sweep } from './eval.mjs';
+import { POLICY, setShelfMode } from '../../public/engine.js';
+import { bench } from '../bench.mjs';
+import { run as sweep } from '../eval.mjs';
 setShelfMode('off');
 POLICY.answerBelow = 12;
 const rows = [];
